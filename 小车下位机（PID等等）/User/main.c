@@ -123,6 +123,9 @@ int main(void)
 		OLED_Printf(38, 48, OLED_6X8, "%+05.2f", TurnPID.Out);
 		OLED_Printf(38, 56, OLED_6X8, "%+05.2f", TURN_GAIN);
 
+		// OLED显示上位机发送的指令
+		OLED_Printf(74, 56, OLED_6X8, "RxC:%d", RxCmd);
+		
 		//输出编译
 		// OLED_Printf(56, 56, OLED_6X8, "Offset:%02.0f", AnglePID.Offset);
 
@@ -264,7 +267,7 @@ void TIM1_UP_IRQHandler(void) //1ms进入一次
 		}
 	
         // 处理下位机通信信息 (提高频率，每 10ms 或 20ms 处理一次)
-        if (CountControl >= 1) 
+        if (CountControl >= 10) 
         {
             CountControl = 0;
 			//接收下位机通信信息
