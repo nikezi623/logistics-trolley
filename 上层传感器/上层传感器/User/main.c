@@ -21,10 +21,27 @@ int main(void)
         }
 
         // OLED
-        OLED_ShowHexNum(0, 0, SensorStatus, 2, OLED_8X16); 
+        // --- 1. 基础数据显示 ---
+        OLED_ShowBinNum(0, 0, SensorStatus, 8, OLED_8X16); 
         OLED_ShowNum(0, 16, KeyNum, 1, OLED_8X16);
-        OLED_Update();
 
+        // --- 2. 传感器状态可视化 (图形法) ---
+        OLED_ClearArea(0, 32, 128, 16); 
+        for (int i = 0; i < 8; i++) 
+        {
+            // 从最左侧(Bit7)往最右侧(Bit0)依次提取状态，0表示压线触发
+            if ((SensorStatus & (0x80 >> i)) == 0) 
+            {
+                OLED_DrawRectangle(i * 16, 32, 14, 14, OLED_FILLED); 
+            } 
+            else 
+            {
+                OLED_DrawRectangle(i * 16, 32, 14, 14, OLED_UNFILLED);
+            }
+        }
+
+        OLED_Update();
+        
         // 左转右转指令
         if (SensorStatus == 0x07 || SensorStatus == 0x0F || SensorStatus == 0x1F || SensorStatus == 0x3F)
         {
