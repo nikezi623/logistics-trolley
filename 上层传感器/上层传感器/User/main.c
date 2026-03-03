@@ -10,7 +10,7 @@ int main(void)
 
     while (1)
     {
-        // 1. 获取一次当前的传感器状态，并在本轮循环中固定使用这个值
+        // 获取一次当前的传感器状态
         SensorStatus = GLE_GetStatus(); 
 
         // 按键逻辑
@@ -20,27 +20,16 @@ int main(void)
             Serial_SendByte(1);
         }
 
-        // OLED显示 (显示当前的 HEX 状态，方便调试)
+        // OLED
         OLED_ShowHexNum(0, 0, SensorStatus, 2, OLED_8X16); 
         OLED_ShowNum(0, 16, KeyNum, 1, OLED_8X16);
         OLED_Update();
 
-        /* --- 状态判断逻辑 ---
-           传感器逻辑假设：0为黑线(灯亮)，1为白地(灯灭)
-           二进制位分布：[Bit7 Bit6 Bit5 Bit4 Bit3 Bit2 Bit1 Bit0]
-                         左 <-------------------------> 右
-        */
-
-        // --- 特殊路况：直角/大弯 (优先级最高，先判断) ---
-        
-        // 左直角/左弯 (左边大片感应): 000x xxxx
-        // 0x07(0000 0111), 0x0F(0000 1111), 0x1F(0001 1111), 0x3F(0011 1111)
+        // 左转右转指令
         if (SensorStatus == 0x07 || SensorStatus == 0x0F || SensorStatus == 0x1F || SensorStatus == 0x3F)
         {
              Serial_SendByte(9); // 左转指令
         }
-        // 右直角/右弯 (右边大片感应): xxxx x000
-        // 0xE0(1110 0000), 0xF0(1111 0000), 0xF8(1111 1000), 0xFC(1111 1100)
         else if (SensorStatus == 0xE0 || SensorStatus == 0xF0 || SensorStatus == 0xF8 || SensorStatus == 0xFC)
         {
              Serial_SendByte(8); // 右转指令
