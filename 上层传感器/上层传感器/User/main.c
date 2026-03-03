@@ -49,12 +49,12 @@ int main(void)
         if (SensorStatus == 9)
         {
              Serial_SendByte(9); // 左转指令
-             SensorStatus_ = 0XF8;
+             SensorStatus_ = 0x07;
         }
         else if (SensorStatus == 8)
         {
              Serial_SendByte(8); // 右转指令
-             SensorStatus_ = 0X1F;
+             SensorStatus_ = 0XE0;
         }
         
         // --- 正常巡线逻辑 ---
