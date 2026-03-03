@@ -163,7 +163,7 @@ int main(void)
 //					SpeedPID.Kd = atof(Value);
 //				}
 				
-				//转向环PID调参
+			//转向环PID调参
 				else if (strcmp(Name, "TurnKp") == 0)
 				{
 					TurnPID.Kp = atof(Value);
@@ -182,22 +182,51 @@ int main(void)
 				{
 					TURN_GAIN = atof(Value);
 				}
-				//输出偏移
-				// else if (strcmp(Name, "Offset") == 0)
-				// {
-				// 	AnglePID.Offset = atof(Value);
-				// }
 			}
-				if (strcmp(Tag, "joystick") == 0) //遥杆
+			if (strcmp(Tag, "joystick") == 0) //遥杆
+			{
+				int8_t LH = atoi(strtok(NULL, ","));
+				int8_t LV = atoi(strtok(NULL, ","));
+				int8_t RH = atoi(strtok(NULL, ","));
+				int8_t RV = atoi(strtok(NULL, ","));
+		
+				// --- LH 映射到 SensorStatus ---
+				// 假设：LH < 0 为向左推，LH > 0 为向右推
+				if (LH < -80) 
 				{
-					int8_t LH = atoi(strtok(NULL, ","));
-					int8_t LV = atoi(strtok(NULL, ","));
-					int8_t RH = atoi(strtok(NULL, ","));
-					int8_t RV = atoi(strtok(NULL, ","));
-			
-					SpeedPID.Target = LV / 25.0;
-					TurnPID.Target = RH / 25.0;
+					Serial_SendByte(9); // 摇杆极左 -> 模拟触发左大弯 (对应指令 9)
 				}
+				else if (LH >= -80 && LH < -40) 
+				{
+					Serial_SendByte(7); // 摇杆偏左 -> 模拟严重偏左 (对应指令 7)
+				}
+				else if (LH >= -40 && LH < -10) 
+				{
+					Serial_SendByte(6); // 摇杆微左 -> 模拟轻微偏左 (对应指令 6)
+				}
+				else if (LH >= -10 && LH <= 10) 
+				{
+					Serial_SendByte(3); // 摇杆居中 -> 模拟完美居中 (对应指令 3，±10为防抖死区)
+				}
+				else if (LH > 10 && LH <= 40) 
+				{
+					Serial_SendByte(4); // 摇杆微右 -> 模拟轻微偏右 (对应指令 4)
+				}
+				else if (LH > 40 && LH <= 80) 
+				{
+					Serial_SendByte(5); // 摇杆偏右 -> 模拟严重偏右 (对应指令 5)
+				}
+				else if (LH > 80) 
+				{
+					Serial_SendByte(8); // 摇杆极右 -> 模拟触发右大弯 (对应指令 8)
+				}
+				
+				// 进阶玩法：如果摇杆往后拉到底，模拟“丢线”
+				if (RV < -80) 
+				{
+					Serial_SendByte(2); // 模拟出线/丢线 (对应指令 2)
+				}                
+			}
 			
 			BlueSerial_RxFlag = 0;
 		}

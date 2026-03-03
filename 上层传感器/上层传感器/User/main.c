@@ -6,18 +6,22 @@ uint16_t time_count;
 int main(void)
 {
     Init_All();
-    uint8_t SensorStatus; // 用于存储当前传感器状态
+    uint8_t SensorStatus = 0xE7; // 用于存储当前传感器状态
+    uint8_t SensorStatus_ = 0xE7; // 用于存储当前传感器状态
 
     while (1)
     {
-        // 获取一次当前的传感器状态
-        SensorStatus = GLE_GetStatus(); 
 
-        // 按键逻辑
-        KeyNum = Key_GetNum();
-        if (KeyNum == 1)
+
+        /*注释掉传感器获取数据，改用遥杆代替传感器*/
+
+        // 获取一次当前的传感器状态
+        // SensorStatus = GLE_GetStatus(); 
+
+        // 使用蓝牙遥杆代替巡线
+		if (Serial_GetRxFlag() == 1)
         {
-            Serial_SendByte(1);
+            SensorStatus = Serial_GetRxData();
         }
 
         // OLED
@@ -29,7 +33,7 @@ int main(void)
         OLED_ClearArea(0, 32, 128, 16); 
         for (int i = 0; i < 8; i++) 
         {
-            if ((SensorStatus & (0x80 >> i)) == 0) 
+            if ((SensorStatus_ & (0x80 >> i)) == 0) 
             {
                 OLED_DrawRectangle(i * 16, 32, 14, 14, OLED_FILLED); 
             } 
@@ -42,13 +46,15 @@ int main(void)
         OLED_Update();
         
         // 左转右转指令
-        if (SensorStatus == 0x07 || SensorStatus == 0x0F || SensorStatus == 0x1F || SensorStatus == 0x3F)
+        if (SensorStatus == 9)
         {
              Serial_SendByte(9); // 左转指令
+             SensorStatus_ = 0XF8;
         }
-        else if (SensorStatus == 0xE0 || SensorStatus == 0xF0 || SensorStatus == 0xF8 || SensorStatus == 0xFC)
+        else if (SensorStatus == 8)
         {
              Serial_SendByte(8); // 右转指令
+             SensorStatus_ = 0X1F;
         }
         
         // --- 正常巡线逻辑 ---
@@ -57,9 +63,10 @@ int main(void)
         // 0xE7(1110 0111): 中间两颗
         // 0xEF(1110 1111): 仅左中一颗
         // 0xF7(1111 0111): 仅右中一颗
-        else if (SensorStatus == 0xE7 || SensorStatus == 0xEF || SensorStatus == 0xF7) 
+        else if (SensorStatus == 3) 
         {
             Serial_SendByte(3);
+            SensorStatus_ = 0xE7;
         }
         // 轻微偏右 (4) -> 车身偏右，线在车身左侧 (Wait, if sensor 2/3 is active (Right side sensors), line is to the Right)
         // 你的逻辑: 0xF3(1111 0011)是 Bit2,3 低电平，这是右侧传感器。意味着线在右边，车需要右转去追线? 
@@ -67,35 +74,40 @@ int main(void)
         // 这里沿用你的定义：0xF3 -> Send 4
         // 0xF3(1111 0011): 右侧两颗
         // 0xFB(1111 1011): 仅 Bit2 (右侧靠中)
-        else if (SensorStatus == 0xF3 || SensorStatus == 0xFB) 
+        else if (SensorStatus == 4) 
         {
             Serial_SendByte(4);
+            SensorStatus_ = 0xF3;
         }
         // 严重偏右 (5)
         // 0xFD(1111 1101): Bit1
         // 0xFE(1111 1110): Bit0 (最右侧)
-        else if (SensorStatus == 0xFD || SensorStatus == 0xFE) 
+        else if (SensorStatus == 5) 
         {
             Serial_SendByte(5);
+            SensorStatus_ = 0xFD;
         }
         // 轻微偏左 (6)
         // 0xCF(1100 1111): 左侧两颗
         // 0xDF(1101 1111): 仅 Bit5 (左侧靠中)
-        else if (SensorStatus == 0xCF || SensorStatus == 0xDF) 
+        else if (SensorStatus == 6) 
         {
             Serial_SendByte(6);
+            SensorStatus_ = 0xCF;
         }
         // 严重偏左 (7)
         // 0xBF(1011 1111): Bit6
         // 0x7F(0111 1111): Bit7 (最左侧)
-        else if (SensorStatus == 0xBF || SensorStatus == 0x7F) 
+        else if (SensorStatus == 7) 
         {
             Serial_SendByte(7);
+            SensorStatus_ = 0xBF;
         }
         // 出线/丢线 (2)
-        else if (SensorStatus == 0xFF) 
+        else if (SensorStatus == 2) 
         {
             Serial_SendByte(2);
+            SensorStatus_ = 0xFF;
         }
     }
 }
