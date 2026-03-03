@@ -1,0 +1,248 @@
+\documentclass[a4paper,12pt]{ctexart}
+
+% 页面设置
+\usepackage[left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}
+
+% 表格宏包
+\usepackage{tabularx}
+\usepackage{multirow}
+\usepackage{makecell}
+\usepackage{array}
+
+% 列表宏包
+\usepackage{enumitem}
+
+% 数学符号（用于对号）
+\usepackage{amssymb}
+
+% 字体调整
+% \setCJKmainfont[BoldFont=SimHei, ItalicFont=KaiTi]{SimSun} % 设置主字体为宋体
+
+% 表格高度调整
+\renewcommand{\arraystretch}{1.4}
+
+\begin{document}
+
+%--- 标题部分 ---
+\begin{center}
+    {\huge \bfseries 上海海事大学 大学生创新训练计划项目申报书}
+\end{center}
+
+\vspace{1em}
+
+\noindent \textbf{申请年度}：2026年 \hfill \textbf{校内编号}：\underline{\hspace{4cm}}
+
+\vspace{1em}
+
+%--- 基本信息表格 ---
+\begin{table}[h!]
+    \centering
+    \small
+    \begin{tabularx}{\textwidth}{|c|X|c|X|c|X|}
+        \hline
+        \textbf{项目名称} & \multicolumn{5}{l|}{基于视觉伺服与柔顺控制的无人机自动换电机器人系统研发} \\
+        \hline
+        \multicolumn{2}{|l|}{\textbf{申报项目级别}（可多选）} & \multicolumn{4}{l|}{国家级($\checkmark$) \quad 市级($\checkmark$) \quad 校级($\checkmark$)} \\
+        \hline
+        \textbf{负责人} &  & \textbf{性别} &  & \textbf{民族} &  \\
+        \hline
+        \textbf{学号} &  & \textbf{所属院系} &  & \textbf{专业} &  \\
+        \hline
+        \textbf{出生年月} & \multicolumn{5}{l|}{ \hspace{2em} 年 \hspace{2em} 月} \\
+        \hline
+        \textbf{联系方式} &  & \textbf{邮箱} &  & \textbf{手机} &  \\
+        \hline
+        \multicolumn{2}{|c|}{\makecell[c]{\textbf{负责人曾经}\\\textbf{参与科研的情况}}} & \multicolumn{4}{X|}{ } \\ 
+        \hline
+        \textbf{项目来源} & 学生自选 & \textbf{立项经费} & \hspace{2em} 元 & \textbf{执行期限} & 1年($\checkmark$) 2年( ) \\
+        \hline
+        \textbf{指导教师} &  & \textbf{联系方式} &  & \textbf{邮箱} &  \\
+        \hline
+        \textbf{导师工号} &  & \textbf{所在学院} &  & \textbf{手机} &  \\
+        \hline
+        \multicolumn{2}{|c|}{\makecell[c]{\textbf{指导教师承担}\\\textbf{科研课题情况}}} & \multicolumn{4}{X|}{ } \\
+        \hline
+        \textbf{备注} & \multicolumn{5}{X|}{1.若立项为国家级，预期成果需满足以下三项中的一项:(1)参加学科竞赛获国家级及以上奖项;(2)发表E类及以上学术论文;(3)取得外观设计、实用新型、发明专利。 \newline 2.若立项为市级，预期成果需满足以下三项中的一项:(1)参加学科竞赛获省部级及以上奖项;(2)发表学术论文;(3)申请外观设计、实用新型、发明专利。} \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+%--- 指导教师支持 ---
+\section*{指导教师对本项目的支持情况}
+\noindent （由指导教师填写，可说明在技术指导、实验设备、文献资料等方面提供的支持）
+\vspace{2cm} % 留白给老师填写
+
+%--- 项目组成员 ---
+\section*{一、项目组主要成员}
+\begin{table}[h!]
+    \centering
+    \begin{tabularx}{\textwidth}{|c|c|c|c|X|}
+        \hline
+        \textbf{姓名} & \textbf{学号} & \textbf{手机} & \textbf{邮箱} & \multicolumn{1}{c|}{\textbf{项目中的分工}} \\
+        \hline
+         &  &  &  & 项目负责人，统筹整体研发、算法设计与系统集成 \\
+        \hline
+         &  &  &  & 机械结构设计，负责电池、电池仓及末端执行器建模 \\
+        \hline
+         &  &  &  & 硬件调试，负责STM32与ROS系统的通信衔接 \\
+        \hline
+         &  &  &  & 实验验证，负责MVP测试与数据整理分析 \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\clearpage
+
+%--- 立项依据 ---
+\section*{二、立项依据}
+
+\subsection*{（1）项目简介（200字以内）}
+本项目针对无人机自动换电的高精度插拔需求，提出融合\textbf{视觉伺服、柔顺控制}与\textbf{机械浮动设计}的解决方案。基于Eye-in-Hand手眼系统与AprilTag视觉定位，结合阻抗控制算法实现机械臂柔顺插拔，搭配柔性末端执行器与导向结构提升容错率。通过ROS与STM32构建上下位机系统，引入触觉传感器实现视触融合，最终研发低成本、高可靠的无人机自动换电机器人原型，解决传统换电定位精度不足、易损坏设备的问题。
+
+\subsection*{（2）研究目的}
+\begin{enumerate}[label=\arabic*.]
+    \item 突破无人机自动换电的高精度插拔技术瓶颈，解决开环控制下定位误差导致的设备损坏问题。
+    \item 验证视觉伺服与柔顺控制结合的技术可行性，形成一套低成本、可复用的机器人插拔作业方案。
+    \item 探索视触融合在轴孔装配任务中的应用价值，为相关机器人作业场景提供技术参考。
+    \item 培养团队在机器人视觉、控制理论、机械设计等领域的综合实践能力，产出可落地的创新成果。
+\end{enumerate}
+
+\subsection*{（3）研究内容}
+\begin{enumerate}[label=\arabic*.]
+    \item \textbf{视觉定位模块开发}：搭建Eye-in-Hand手眼系统，基于OpenCV的solvePnP函数实现AprilTag码的位姿解算，完成无人机电池与电池仓的精准定位。
+    \item \textbf{柔顺控制算法设计}：基于STM32与M3508/M2006电机，实现阻抗控制与力位混合控制，使机械臂在插拔过程中具备“柔性”特性，避免刚性碰撞。
+    \item \textbf{机械结构设计与制作}：设计快拆式电池/电池仓接口模型，集成RCC柔性浮动机构与导向倒角结构，提升机械臂末端执行器的容错能力。
+    \item \textbf{系统架构搭建}：构建ROS上位机与STM32下位机的通信链路，复用RoboMaster开源底盘算法，实现机器人移动与机械臂操作的协同控制。
+    \item \textbf{视触融合功能集成}：在末端执行器加装力传感器，开发触觉引导插拔逻辑，解决视觉遮挡场景下的插拔难题。
+\end{enumerate}
+
+\subsection*{（4）国内外研究现状和发展动态}
+在国际上，无人机自动换电技术已应用于大疆机场等商用产品，其核心依赖高精度视觉定位与柔顺控制技术，主流方案采用基于工业级机械臂的Eye-in-Hand系统，搭配力控算法实现精准插拔。在学术领域，Peg-in-Hole轴孔装配问题的研究聚焦于视觉伺服与阻抗控制的结合，视触融合技术成为提升复杂场景作业鲁棒性的重要方向。
+
+在国内，该领域研究多集中于高校与科研院所，如RoboMaster竞赛中涌现的自动取矿、物资投送等技术，已验证了视觉对位与机械臂控制的可行性。但现有方案多针对特定场景，存在成本高、通用性不足的问题，将视觉伺服、柔顺控制与机械容错设计结合的低成本方案仍有待完善，本项目的研究方向具有较强的创新性与实用性。
+
+\subsection*{（5）创新点与项目特色}
+\begin{enumerate}[label=\arabic*.]
+    \item \textbf{技术创新}：提出“视觉定位+柔顺控制+机械容错”的三位一体解决方案，将Eye-in-Hand视觉伺服与阻抗控制算法深度融合，同时通过RCC浮动机构与导向倒角设计降低算法实现难度。
+    \item \textbf{功能创新}：引入触觉传感器实现视触融合，解决电池插入过程中视觉遮挡导致的定位失效问题，提升系统作业的鲁棒性。
+    \item \textbf{成本优势}：基于开源硬件与算法（RoboMaster底盘、OpenCV、ROS），采用3D打印制作机械结构，大幅降低研发成本，具备较强的推广价值。
+    \item \textbf{实践特色}：依托大二学生现有STM32与机器人竞赛基础，方案具备可操作性，研发路径遵循MVP原则，从机械验证到系统集成循序渐进，易出阶段性成果。
+\end{enumerate}
+
+\subsection*{（6）技术路线、拟解决的问题及预期成果}
+\subsubsection*{技术路线}
+\begin{enumerate}[label=\arabic*.]
+    \item \textbf{机械验证阶段}：3D打印假电池与电池仓模型，设计导向倒角与快拆结构，验证手动插拔的顺畅性。
+    \item \textbf{视觉定位阶段}：搭建Eye-in-Hand系统，部署AprilTag码，基于OpenCV完成位姿解算与视觉伺服控制，实现机械臂对目标的跟踪定位。
+    \item \textbf{柔顺控制阶段}：在STM32上开发阻抗控制算法，结合电机电流环实现力控，完成机械臂柔顺插拔的单机验证。
+    \item \textbf{系统集成阶段}：搭建ROS与STM32通信链路，集成移动底盘，实现机器人自主移动、定位、插拔的全流程作业。
+    \item \textbf{视触融合阶段}：加装力传感器，开发触觉引导逻辑，优化插拔策略，完成系统联调与性能测试。
+\end{enumerate}
+
+\subsubsection*{拟解决的关键问题}
+\begin{enumerate}[label=\arabic*.]
+    \item 解决开环控制下机械臂定位精度不足，导致电池插拔时损坏接口的问题。
+    \item 攻克视觉伺服中手眼标定误差、光照干扰等难题，提升位姿解算的准确性与稳定性。
+    \item 实现阻抗控制算法在低成本电机上的落地应用，平衡控制精度与硬件成本。
+    \item 解决电池插入过程中视觉遮挡问题，通过视触融合提升作业鲁棒性。
+\end{enumerate}
+
+\subsubsection*{预期成果}
+\begin{enumerate}[label=\arabic*.]
+    \item 产出1套完整的无人机自动换电机器人原型系统，包含机械结构、视觉定位模块、柔顺控制模块与视触融合功能。
+    \item 申请实用新型专利1-2项，发表学术论文1篇（或参加国家级学科竞赛并获奖）。
+    \item 形成可复用的开源代码库，涵盖视觉伺服、阻抗控制、ROS-STM32通信等核心功能。
+    \item 提交项目研究报告1份，详细阐述技术方案、实验数据与成果分析。
+\end{enumerate}
+
+\subsection*{（7）项目研究进度安排}
+\begin{description}[style=multiline, leftmargin=3.5cm]
+    \item[第1周（机械验证）] 完成假电池、电池仓及末端执行器的3D建模与打印，验证手动插拔的顺畅性，优化导向倒角结构。
+    \item[第2周（视觉验证）] 搭建Eye-in-Hand手眼系统，部署AprilTag码，基于OpenCV实现位姿解算，完成机械臂视觉跟踪调试。
+    \item[第3周（控制验证）] 在STM32上开发阻抗控制算法，实现电机电流环力矩控制，完成机械臂柔顺插拔的单机测试。
+    \item[第4-6周（系统集成）] 搭建ROS上位机与STM32下位机通信链路，集成RoboMaster底盘算法，实现机器人自主移动与定位。
+    \item[第7-8周（视触融合）] 加装力传感器，开发触觉引导插拔逻辑，解决视觉遮挡问题，完成系统联调。
+    \item[第9-10周（性能测试）] 开展多场景插拔实验，收集定位精度、插拔成功率等数据，优化算法与机械结构。
+    \item[第11-12周（成果整理）] 撰写研究报告，准备专利申请与论文投稿材料，参加学科竞赛。
+\end{description}
+
+\subsection*{（8）已有基础}
+\textbf{1. 与本项目有关的研究积累和已取得的成绩}
+\begin{itemize}
+    \item 团队成员具备STM32开发基础，熟悉M3508/M2006电机的电流闭环控制原理。
+    \item 掌握OpenCV视觉库的基本使用，了解solvePnP函数位姿解算方法。
+    \item 参与RoboMaster竞赛相关训练，熟悉麦克纳姆轮底盘运动学与开源代码复用。
+    \item 具备3D建模与打印能力，能够独立完成机械结构的设计与制作。
+\end{itemize}
+
+\textbf{2. 已具备的条件，尚缺少的条件及解决方法}
+\begin{itemize}
+    \item \textbf{已具备条件}：拥有电脑、USB摄像头、STM32开发板等基础硬件；可使用学校实验室3D打印机；具备ROS、OpenCV等开源软件环境。
+    \item \textbf{缺少条件}：缺少工业级机械臂、高精度力传感器等设备；缺乏手眼标定、阻抗控制的工程实践经验。
+    \item \textbf{解决方法}：采用RoboMaster工程机器人替代工业机械臂，降低硬件成本；选用低成本力传感器完成功能验证；查阅知网、IEEE相关文献，参考B站RoboMaster强队开源方案，寻求指导教师的技术支持。
+\end{itemize}
+
+\clearpage
+
+%--- 经费预算 ---
+\section*{三、经费预算}
+\begin{table}[h!]
+    \centering
+    \begin{tabularx}{\textwidth}{|c|c|X|}
+        \hline
+        \textbf{开支科目} & \textbf{预算经费（元）} & \multicolumn{1}{c|}{\textbf{主要用途}} \\
+        \hline
+        预算经费总额 &  & （与申请金额相等） \\
+        \hline
+        办公费 &  & 购买实验记录本、打印技术资料、项目文档装订等 \\
+        \hline
+        印刷费 &  & 3D打印机械结构零件（假电池、电池仓、末端执行器等） \\
+        \hline
+        维护费 &  & 实验设备的日常维护、电机与传感器的耗材更换 \\
+        \hline
+        市内差旅费 &  & 前往实验室开展实验、参与校内技术交流活动的交通支出 \\
+        \hline
+        国内差旅费 &  & 参加国家级学科竞赛、学术会议的交通与住宿费用 \\
+        \hline
+        邮电费 &  & 传感器、电子元件等实验材料的邮寄费用 \\
+        \hline
+        专用材料费 &  & 购买AprilTag码贴纸、力传感器、导线、连接件等核心耗材 \\
+        \hline
+        本科生业务费 &  & 购买开源代码库权限、文献下载费用等 \\
+        \hline
+        其他教学杂项费用 &  & 项目验收、成果展示等相关费用 \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\section*{四、项目诚信承诺}
+本项目全体成员慎重承诺，该项目研究将遵守学校有关规定，恪守学术规范，不抄袭他人成果，不弄虚作假，诚信做学问和研究，按项目研究进度保质保量完成各项研究任务。如有违规行为，愿承担一切责任，接受学校的处理。
+
+\vspace{2em}
+\noindent \textbf{项目组全体成员签名:}
+
+\vspace{2em}
+\hfill 年 \quad 月 \quad 日
+
+\vspace{2em}
+
+%--- 审核意见 ---
+\section*{五、审核意见}
+\begin{table}[h!]
+    \centering
+    \renewcommand{\arraystretch}{2.0}
+    \begin{tabularx}{\textwidth}{|c|X|}
+        \hline
+        \textbf{指导教师意见:} &  \\
+         & \hfill 签名：\hspace{4em} \newline \hfill 年 \quad 月 \quad 日 \\
+        \hline
+        \textbf{学院意见:} &  \\
+         & \hfill 签名（盖章）：\hspace{4em} \newline \hfill 年 \quad 月 \quad 日 \\
+        \hline
+        \textbf{学校主管部门意见:} &  \\
+         & \hfill 学校主管部门签字：\hspace{4em} \newline \hfill 年 \quad 月 \quad 日 \\
+        \hline
+    \end{tabularx}
+\end{table}
+
+\end{document}
