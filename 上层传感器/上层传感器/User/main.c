@@ -29,7 +29,6 @@ int main(void)
         OLED_ClearArea(0, 32, 128, 16); 
         for (int i = 0; i < 8; i++) 
         {
-            // 从最左侧(Bit7)往最右侧(Bit0)依次提取状态，0表示压线触发
             if ((SensorStatus & (0x80 >> i)) == 0) 
             {
                 OLED_DrawRectangle(i * 16, 32, 14, 14, OLED_FILLED); 
