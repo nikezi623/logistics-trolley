@@ -17,8 +17,8 @@ float TURN_GAIN = 0; // 转向灵敏度 (将视觉误差转化为 TurnTarget 的
 // --- 巡线参数配置 ---
 #define BASE_SPEED      2.0   // 基础直道速度 (可以比原来设高一点)
 #define MIN_SPEED       0.05   // 弯道最低速度
-//#define TURN_GAIN       1.0   // 转向灵敏度 (将视觉误差转化为 TurnTarget 的系数)
-#define SPEED_DROP_K    0.7   // 减速系数 (误差越大，减速越明显)
+#define TURN_GAIN       0.6   // 转向灵敏度 (将视觉误差转化为 TurnTarget 的系数)
+#define SPEED_DROP_K    2.0   // 减速系数 (误差越大，减速越明显)
 
 // --- 视觉状态映射 ---
 // 将 RxCmd 映射为偏差值：负数左偏，正数右偏，0居中
@@ -64,7 +64,7 @@ int main(void)
 			{
 				PID_Init(&SpeedPID);//清零PID，防止启动前较大的积分累计
 				PID_Init(&TurnPID);//清零PID，防止启动前较大的积分累计
-				SpeedPID.Target = 8;	
+				SpeedPID.Target = COMMONSPEED;	
 				RunFlag = 1;
 			}
 			else
@@ -178,10 +178,10 @@ int main(void)
 				}
 
 				//转向灵敏度调参
-				else if (strcmp(Name, "TurnL") == 0)
-				{
-					TURN_GAIN = atof(Value);
-				}
+				// else if (strcmp(Name, "TurnL") == 0)
+				// {
+				// 	TURN_GAIN = atof(Value);
+				// }
 			}
 			if (strcmp(Tag, "joystick") == 0) //遥杆
 			{
