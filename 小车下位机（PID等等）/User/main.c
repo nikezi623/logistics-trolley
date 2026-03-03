@@ -56,7 +56,6 @@ int main(void)
 	Init_All();	 
 	while (1)
 	{
-//		Motor_SetPWM(2, 50);
 		KeyNum = Key_GetNum();
 
 		if (KeyNum == 1)//按键1控制启停
