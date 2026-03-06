@@ -12,13 +12,15 @@ uint8_t KeyNum, RunFlag;//runflag表示运行启停
 int16_t LeftPWM, RightPWM, AvgPWM, DifPWM;
 double LeftSpeed, RightSpeed, AvgSpeed, DifSpeed;
 uint8_t RxCmd, LastCmd;
-float TURN_GAIN = 0; // 转向灵敏度 (将视觉误差转化为 TurnTarget 的系数)
+float Vision_Error_Integral = 0;
+float VISION_KI = 0.05; // 积分系数，需要从很小的值慢慢调大
+//float TURN_GAIN = 0.3; // 转向灵敏度 (将视觉误差转化为 TurnTarget 的系数)
 
 // --- 巡线参数配置 ---
 #define BASE_SPEED      2.0   // 基础直道速度 (可以比原来设高一点)
-#define MIN_SPEED       0.05   // 弯道最低速度
-//#define TURN_GAIN       1.0   // 转向灵敏度 (将视觉误差转化为 TurnTarget 的系数)
-#define SPEED_DROP_K    0.7   // 减速系数 (误差越大，减速越明显)
+#define MIN_SPEED       0.5   // 弯道最低速度
+#define TURN_GAIN       0.55   // 转向灵敏度 (将视觉误差转化为 TurnTarget 的系数)
+#define SPEED_DROP_K    1.3   // 减速系数 (误差越大，减速越明显)
 
 // --- 视觉状态映射 ---
 // 将 RxCmd 映射为偏差值：负数左偏，正数右偏，0居中
@@ -64,7 +66,10 @@ int main(void)
 			{
 				PID_Init(&SpeedPID);//清零PID，防止启动前较大的积分累计
 				PID_Init(&TurnPID);//清零PID，防止启动前较大的积分累计
-				SpeedPID.Target = 8;	
+				SpeedPID.Target = COMMONSPEED;
+				DifPWM = 0; 
+				AvgPWM = 0;
+				RxCmd = 2;
 				RunFlag = 1;
 			}
 			else
@@ -94,12 +99,15 @@ int main(void)
 
 			Vision_Error = Get_Vision_Error(RxCmd);
 
+			// 误差累加（积分）
+			Vision_Error_Integral += Vision_Error;
+			// 积分限幅，防止偏离过久导致积分爆表（俗称积分饱和）
+			if (Vision_Error_Integral > 100) Vision_Error_Integral = 100;
+			if (Vision_Error_Integral < -100) Vision_Error_Integral = -100;
+			
 			double expected_speed = BASE_SPEED - (SPEED_DROP_K * fabs(Vision_Error));
-			
 			if (expected_speed < MIN_SPEED) expected_speed = MIN_SPEED;
-			
 			SpeedPID.Target = expected_speed;
-
 			TurnPID.Target = Vision_Error * TURN_GAIN;
 		}		
 
@@ -175,10 +183,10 @@ int main(void)
 				}
 
 				//转向灵敏度调参
-				else if (strcmp(Name, "TurnL") == 0)
-				{
-					TURN_GAIN = atof(Value);
-				}
+//				else if (strcmp(Name, "TurnL") == 0)
+//				{
+//					TURN_GAIN = atof(Value);
+//				}
 				//输出偏移
 				// else if (strcmp(Name, "Offset") == 0)
 				// {
@@ -220,7 +228,7 @@ void TIM1_UP_IRQHandler(void) //1ms进入一次
 		Key_Tick();
 	
 		//速度环(定时读取编码器并进行外环PID调控)
-		if (CountSpeed >= 50)
+		if (CountSpeed >= 35)
 		{
 			CountSpeed = 0;
 
@@ -252,7 +260,7 @@ void TIM1_UP_IRQHandler(void) //1ms进入一次
 		}
 	
 		//转向环(外环PID调控)
-		if (CountTurn >= 50)
+		if (CountTurn >= 35)
 		{
 			CountTurn = 0;
 			if (RunFlag)
