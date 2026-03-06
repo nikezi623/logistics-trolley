@@ -15,13 +15,13 @@ uint8_t RxCmd, LastCmd;
 float Vision_Error_Integral = 0;
 float Last_Vision_Error = 0; // 👇 新增：记录上一次的误差
 float VISION_KI = 0;		 // 积分系数，需要从很小的值慢慢调大
-float VISION_KD = 0;		 // 👇 新增：微分系数 (一般比 P 小一点)
-float TURN_GAIN = 0;
-float SPEED_DROP_K = 0;
+float VISION_KD = 2.5;		 // 👇 新增：微分系数 (一般比 P 小一点)
+float TURN_GAIN = 0.5;
+float SPEED_DROP_K = 5.0;
 
 // --- 巡线参数配置 ---
 #define BASE_SPEED 2.0 // 基础直道速度 (可以比原来设高一点)
-#define MIN_SPEED 0.05 // 弯道最低速度
+#define MIN_SPEED  2.0 // 弯道最低速度
 // #define TURN_GAIN       0.5   // 转向灵敏度 (将视觉误差转化为 TurnTarget 的系数)
 // #define SPEED_DROP_K    1.0   // 减速系数 (误差越大，减速越明显)
 

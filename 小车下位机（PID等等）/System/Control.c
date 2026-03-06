@@ -11,8 +11,8 @@ float Get_Vision_Error(uint8_t cmd)
         case 5: error = 1.6;  break; // 严重偏右
         case 6: error = -0.8; break; // 轻微偏左
         case 7: error = -1.6; break; // 严重偏左
-//        case 8: error = 14.0;  break; // 右直角/大弯
-//        case 9: error = -14.0; break; // 左直角/大弯
+    //    case 8: error = 14.0;  break; // 右直角/大弯
+    //    case 9: error = -14.0; break; // 左直角/大弯
         default: error = 0;   break; // 未知情况暂按0处理
     }
     return error;
