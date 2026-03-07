@@ -20,8 +20,8 @@ float TURN_GAIN = 0.5;
 float SPEED_DROP_K = 5.0;
 
 // --- 巡线参数配置 ---
-#define BASE_SPEED 2.0 // 基础直道速度 (可以比原来设高一点)
-#define MIN_SPEED  2.0 // 弯道最低速度
+#define BASE_SPEED 1.86 // 基础直道速度 (可以比原来设高一点)
+#define MIN_SPEED 1.0  // 弯道最低速度
 // #define TURN_GAIN       0.5   // 转向灵敏度 (将视觉误差转化为 TurnTarget 的系数)
 // #define SPEED_DROP_K    1.0   // 减速系数 (误差越大，减速越明显)
 
@@ -30,7 +30,7 @@ float SPEED_DROP_K = 5.0;
 // 3:中, 4:微右, 5:重右, 6:微左, 7:重左, 8:右直角, 9:左直角
 float Vision_Error = 0;
 
-uint8_t ConFlag = 0;
+uint8_t ConFlag = 0; // 0: 正常直线寻路, 1: 正在右直角转, 2: 正在左直角转
 
 PID_t SpeedPID = {
 	.Kp = 4.00,
@@ -86,46 +86,76 @@ int main(void)
 		else
 			LED_OFF(); // 灯亮表示pid工作
 
-		if (RxCmd == 2) // 丢线
+		// // --- 1. 最高优先级：判断是否该退出直角转弯 ---
+		// if (ConFlag != 0 && RxCmd == 3)
+		// {
+		// 	ConFlag = 0;
+
+		// 	// ⚠️ 这一步千万别漏了！清空旧的历史积分，不然恢复直行时车头会猛烈哆嗦
+		// 	Vision_Error_Integral = 0;
+		// 	Last_Vision_Error = 0;
+		// }
+
+		// --- 2. 根据当前状态，决定车子怎么动 ---
+		if (ConFlag == 1)
 		{
-			SpeedPID.Target = MIN_SPEED;
-			TurnPID.Target = 0;
+			// 正在右转
+			SpeedPID.Target = 0;
+			TurnPID.Target = 2;
 		}
-		else if (RxCmd == 8)
+		else if (ConFlag == 2)
 		{
-			ConFlag = 1;
-		}
-		else if (RxCmd == 9)
-		{
-			ConFlag = 2;
+			// 正在左转
+			SpeedPID.Target = 0;
+			TurnPID.Target = -2;
 		}
 		else
 		{
-			LastCmd = RxCmd;
-			Vision_Error = Get_Vision_Error(RxCmd);
+			// 【ConFlag == 0 时，执行正常寻路逻辑】
 
-			// 误差累加（积分）
-			Vision_Error_Integral += Vision_Error;
-			if (Vision_Error_Integral > 100)
-				Vision_Error_Integral = 100;
-			if (Vision_Error_Integral < -100)
-				Vision_Error_Integral = -100;
+			// 只有在没转弯的时候，才去接收新的直角指令或处理丢线
+			if (RxCmd == 8)
+			{
+				ConFlag = 1; // 触发右转 (下个循环立马开始转)
+			}
+			else if (RxCmd == 9)
+			{
+				ConFlag = 2; // 触发左转 (下个循环立马开始转)
+			}
+			else if (RxCmd == 2) // 真·丢线
+			{
+				SpeedPID.Target = MIN_SPEED;
+				TurnPID.Target = 0;
+			}
+			else
+			{
+				// 正常的 P+I+D 巡线逻辑
+				Vision_Error = Get_Vision_Error(RxCmd);
 
-			// 计算 D (微分)
-			float Vision_Derivative = Vision_Error - Last_Vision_Error;
-			Last_Vision_Error = Vision_Error; // 更新上次误差，为下一拍做准备
+				// 误差累加（积分）
+				Vision_Error_Integral += Vision_Error;
+				if (Vision_Error_Integral > 100)
+					Vision_Error_Integral = 100;
+				if (Vision_Error_Integral < -100)
+					Vision_Error_Integral = -100;
 
-			// 速度目标值
-			double expected_speed = BASE_SPEED - (SPEED_DROP_K * fabs(Vision_Error));
-			if (expected_speed < MIN_SPEED)
-				expected_speed = MIN_SPEED;
-			SpeedPID.Target = expected_speed;
+				// 计算 D (微分)
+				float Vision_Derivative = Vision_Error - Last_Vision_Error;
+				Last_Vision_Error = Vision_Error;
 
-			// 转向环目标值
-			TurnPID.Target = (Vision_Error * TURN_GAIN) +
-							 (Vision_Error_Integral * VISION_KI) +
-							 (Vision_Derivative * VISION_KD);
+				// 速度目标值
+				double expected_speed = BASE_SPEED - (SPEED_DROP_K * fabs(Vision_Error));
+				if (expected_speed < MIN_SPEED)
+					expected_speed = MIN_SPEED;
+				SpeedPID.Target = expected_speed;
+
+				// 转向环目标值
+				TurnPID.Target = (Vision_Error * TURN_GAIN) +
+								 (Vision_Error_Integral * VISION_KI) +
+								 (Vision_Derivative * VISION_KD);
+			}
 		}
+
 		OLED_Clear();
 		// OLED速度环参数显示
 		OLED_Printf(0, 0, OLED_6X8, "Speed");
@@ -294,10 +324,39 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 		if (CountControl >= 1)
 		{
 			CountControl = 0;
-			// 接收下位机通信信息
+			// 接收下位机通信信息，并进行直角弯初始化
 			if (Serial_GetRxFlag() == 1)
 			{
 				RxCmd = Serial_GetRxData();
+
+				// --- 1. 最高优先级：判断是否该退出直角转弯 ---
+				if (ConFlag != 0 && RxCmd == 3)
+				{
+					ConFlag = 0;
+
+					// ⚠️ 这一步千万别漏了！清空旧的历史积分，不然恢复直行时车头会猛烈哆嗦
+					Vision_Error_Integral = 0;
+					Last_Vision_Error = 0;
+					PID_Init(&SpeedPID); // 👈 只在这里初始化一次！
+					PID_Init(&TurnPID);
+				}
+
+				// 👇 在收到数据的一瞬间捕捉直角信号
+				if (ConFlag == 0) // 只有在直线状态下才检测
+				{
+					if (RxCmd == 8)
+					{
+						ConFlag = 1;
+						PID_Init(&SpeedPID); // 👈 只在这里初始化一次！
+						PID_Init(&TurnPID);
+					}
+					else if (RxCmd == 9)
+					{
+						ConFlag = 2;
+						PID_Init(&SpeedPID); // 👈 只在这里初始化一次！
+						PID_Init(&TurnPID);
+					}
+				}
 			}
 		}
 		time_count = TIM_GetCounter(TIM1);

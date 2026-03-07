@@ -42,11 +42,11 @@ int main(void)
         OLED_Update();
         
         // 左转右转指令
-        if (SensorStatus == 0x07 || SensorStatus == 0x0F || SensorStatus == 0x1F || SensorStatus == 0x3F)
+        if (SensorStatus == 0x07 || SensorStatus == 0x0F || SensorStatus == 0x1F || SensorStatus == 0x3F || SensorStatus == 0x7F)
         {
              Serial_SendByte(9); // 左转指令
         }
-        else if (SensorStatus == 0xE0 || SensorStatus == 0xF0 || SensorStatus == 0xF8 || SensorStatus == 0xFC)
+        else if (SensorStatus == 0xE0 || SensorStatus == 0xF0 || SensorStatus == 0xF8 || SensorStatus == 0xFC || SensorStatus == 0xFE)
         {
              Serial_SendByte(8); // 右转指令
         }
