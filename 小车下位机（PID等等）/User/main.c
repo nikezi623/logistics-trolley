@@ -20,6 +20,8 @@ float TURN_GAIN = 0.5;
 float SPEED_DROP_K = 5.0;
 uint8_t all_black_flag = 0;
 uint8_t send_item_flag = 0;
+uint8_t Has_Turned_Right_Angle = 0; // 👇 新增：记录是否已经执行过直角转弯 (0:没转过, 1:已转过)
+uint8_t normal_find_line_flag = 0;
 
 // --- 巡线参数配置 ---
 #define BASE_SPEED 1.86 // 基础直道速度 (可以比原来设高一点)
@@ -49,7 +51,7 @@ PID_t SpeedPID = {
 PID_t TurnPID = {
 	.Kp = 6.00,
 	.Ki = 2.00,
-	.Kd = 0.00,
+	.Kd = 0.40,
 
 	.OutMax = 100,
 	.OutMin = -100,
@@ -84,6 +86,8 @@ int main(void)
 				RunFlag = 1;
 				all_black_flag = 0;
 				send_item_flag = 0;
+				Has_Turned_Right_Angle = 0;
+				normal_find_line_flag = 0;
 			}
 			else
 			{
@@ -111,24 +115,16 @@ int main(void)
 		// 非直角弯进行寻路模式
 		else
 		{
-			if (RxCmd == 8)
-			{
-				ConFlag = 1; // 触发右转 (下个循环立马开始转)
-			}
-			else if (RxCmd == 9)
-			{
-				ConFlag = 2; // 触发左转 (下个循环立马开始转)
-			}
-			else if (RxCmd == 2) // 真·丢线
+			if (RxCmd == 2) // 真·丢线
 			{
 				SpeedPID.Target = MIN_SPEED;
 				TurnPID.Target = 0;
 			}
-			else if(RxCmd == 1) // 全黑任务
+			else if (RxCmd == 1) // 全黑任务
 			{
 				ConFlag = 3;
 			}
-			else
+			else if (RxCmd != 8 && RxCmd != 9 && normal_find_line_flag == 0)
 			{
 				// 正常的 P+I+D 巡线逻辑
 				Vision_Error = Get_Vision_Error(RxCmd);
@@ -351,6 +347,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				}
 				else if (RxCmd == 1 && all_black_flag == 2) // 开启投放货物流程(代码暂定)
 				{
+					normal_find_line_flag = 1;
 					send_item_flag = 1;
 					if (1)
 					{
@@ -361,6 +358,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				else if (RxCmd == 1 && all_black_flag == 3)
 				{
 					SpeedPID.Target = MIN_SPEED;
+					TurnPID.Target = 0;
 				}
 				else if (RxCmd != 1 && all_black_flag == 3)
 				{
@@ -384,17 +382,19 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				}
 
 				// 👇 在收到数据的一瞬间捕捉直角信号
-				if (ConFlag == 0) // 只有在直线状态下才检测
+				if (ConFlag == 0 && Has_Turned_Right_Angle == 0) // 只有在直线状态下才检测
 				{
 					if (RxCmd == 8)
 					{
 						ConFlag = 1;
+						Has_Turned_Right_Angle = 1;
 						PID_Init(&SpeedPID); // 👈 只在这里初始化一次！
 						PID_Init(&TurnPID);
 					}
 					else if (RxCmd == 9)
 					{
 						ConFlag = 2;
+						Has_Turned_Right_Angle = 1;
 						PID_Init(&SpeedPID); // 👈 只在这里初始化一次！
 						PID_Init(&TurnPID);
 					}
