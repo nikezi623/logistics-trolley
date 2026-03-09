@@ -13,12 +13,12 @@ int main(void)
         // 获取一次当前的传感器状态
         SensorStatus = GLE_GetStatus(); 
 
-        // 按键逻辑
-        KeyNum = Key_GetNum();
-        if (KeyNum == 1)
-        {
-            Serial_SendByte(1);
-        }
+        // // 按键逻辑
+        // KeyNum = Key_GetNum();
+        // if (KeyNum == 1)
+        // {
+        //     Serial_SendByte(1);
+        // }
 
         // OLED
         // --- 1. 基础数据显示 ---
@@ -96,6 +96,11 @@ int main(void)
         else if (SensorStatus == 0xFF) 
         {
             Serial_SendByte(2);
+        }
+        // 全黑 (0)
+        else if (SensorStatus == 0x00)
+        {
+            Serial_SendByte(1);
         }
     }
 }
