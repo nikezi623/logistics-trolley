@@ -86,16 +86,6 @@ int main(void)
 		else
 			LED_OFF(); // 灯亮表示pid工作
 
-		// // --- 1. 最高优先级：判断是否该退出直角转弯 ---
-		// if (ConFlag != 0 && RxCmd == 3)
-		// {
-		// 	ConFlag = 0;
-
-		// 	// ⚠️ 这一步千万别漏了！清空旧的历史积分，不然恢复直行时车头会猛烈哆嗦
-		// 	Vision_Error_Integral = 0;
-		// 	Last_Vision_Error = 0;
-		// }
-
 		// --- 2. 根据当前状态，决定车子怎么动 ---
 		if (ConFlag == 1)
 		{
