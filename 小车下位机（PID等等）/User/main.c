@@ -20,10 +20,13 @@ float TURN_GAIN = 0.5;
 float SPEED_DROP_K = 5.0;
 uint8_t all_black_flag = 0;
 uint8_t send_item_flag = 0;
+uint8_t adjust_flag = 0;
+uint8_t adjust_step = 0;	  // 👇 新增：校准动作当前的步骤
+uint16_t adjust_timer_ms = 0; // 👇 新增：用于非阻塞延时的计时器
 
 // --- 巡线参数配置 ---
 #define BASE_SPEED 1.86 // 基础直道速度 (可以比原来设高一点)
-#define MIN_SPEED 1.0	// 弯道最低速度
+int8_t MIN_SPEED = 1.0;	// 弯道最低速度
 // #define TURN_GAIN       0.5   // 转向灵敏度 (将视觉误差转化为 TurnTarget 的系数)
 // #define SPEED_DROP_K    1.0   // 减速系数 (误差越大，减速越明显)
 
@@ -84,6 +87,7 @@ int main(void)
 				RunFlag = 1;
 				all_black_flag = 0;
 				send_item_flag = 0;
+				adjust_flag = 0;
 			}
 			else
 			{
@@ -108,23 +112,193 @@ int main(void)
 			SpeedPID.Target = 0;
 			TurnPID.Target = -2;
 		}
+		else if (ConFlag == 4)
+		{
+			switch (adjust_step)
+			{
+			case 0: // 步骤 0：急停
+				SpeedPID.Target = 0;
+				TurnPID.Target = 0;
+				// 刹车 200ms 后进入下一步
+				if (adjust_timer_ms > 200)
+				{
+					adjust_step = 1;
+					adjust_timer_ms = 0;
+				}
+				break;
+
+			case 1: // 步骤 1：向右原地旋转一下下
+				SpeedPID.Target = 0;
+				TurnPID.Target = 2; // 原地右转
+				// 转 150ms，这个时间你要根据实际车速调
+				if (adjust_timer_ms > 350)
+				{
+					adjust_step = 2;
+					adjust_timer_ms = 0;
+				}
+				break;
+
+			case 2: // 步骤 2：向前开一下下
+				SpeedPID.Target = MIN_SPEED;
+				TurnPID.Target = 0;
+				// 往前走 150ms
+				if (adjust_timer_ms > 30)
+				{
+					adjust_step = 3;
+					adjust_timer_ms = 0;
+				}
+				break;
+
+			case 3: // 步骤 3：原地左旋一下下 (回正车头)
+				SpeedPID.Target = 0;
+				TurnPID.Target = -1; // 原地左转
+				// 转 150ms
+				if (adjust_timer_ms > 350)
+				{
+					adjust_step = 4;
+					adjust_timer_ms = 0;
+				}
+				break;
+
+			case 4:							  // 步骤 4：前后开一下下同时判断全黑
+				SpeedPID.Target = -MIN_SPEED; // 先尝试缓慢往后找线
+				TurnPID.Target = 0;
+
+				// 🌟 找到全黑线，校准成功！退出状态机
+				if (RxCmd == 1)
+				{
+					ConFlag = 0;	 // 恢复正常巡线
+					adjust_step = 0; // 重置步骤
+					PID_Init(&SpeedPID);
+					PID_Init(&TurnPID);
+					// 注意：退出后，下一次循环由于 RxCmd==1，会被上面的全黑任务接管，完美衔接！
+				}
+				// 如果往前找了 100ms 还没碰到全黑线，说明校准不到位，重来！
+				else if (adjust_timer_ms > 50)
+				{
+					adjust_timer_ms = 0;
+
+					SpeedPID.Target = MIN_SPEED; // 先尝试缓慢往后找线
+					TurnPID.Target = 0;
+
+					// 🌟 找到全黑线，校准成功！退出状态机
+					if (RxCmd == 1)
+					{
+						ConFlag = 0;	 // 恢复正常巡线
+						adjust_step = 0; // 重置步骤
+						PID_Init(&SpeedPID);
+						PID_Init(&TurnPID);
+						// 注意：退出后，下一次循环由于 RxCmd==1，会被上面的全黑任务接管，完美衔接！
+					}
+					// 如果往前找了 100ms 还没碰到全黑线，说明校准不到位，重来！
+					else if (adjust_timer_ms > 200)
+					{
+						adjust_step = 1; // 回到步骤 1：继续向右调整
+						adjust_timer_ms = 0;
+					}
+				}
+				break;
+			}
+		}
+		else if (ConFlag == 5) // 🌟 自动校准模式 (误判左直角，说明车身偏右)
+		{
+			switch (adjust_step)
+			{
+			case 0: // 步骤 0：急停
+				SpeedPID.Target = 0;
+				TurnPID.Target = 0;
+				// 刹车 200ms 后进入下一步
+				if (adjust_timer_ms > 200)
+				{
+					adjust_step = 1;
+					adjust_timer_ms = 0;
+				}
+				break;
+
+			case 1: // 步骤 1：向左原地旋转一下下 (注意这里是 -2)
+				SpeedPID.Target = 0;
+				TurnPID.Target = -1; // 原地左转
+				if (adjust_timer_ms > 350)
+				{
+					adjust_step = 2;
+					adjust_timer_ms = 0;
+				}
+				break;
+
+			case 2: // 步骤 2：向前开一下下
+				SpeedPID.Target = MIN_SPEED;
+				TurnPID.Target = 0;
+				if (adjust_timer_ms > 30)
+				{
+					adjust_step = 3;
+					adjust_timer_ms = 0;
+				}
+				break;
+
+			case 3: // 步骤 3：原地右旋一下下 (回正车头，注意这里是 2)
+				SpeedPID.Target = 0;
+				TurnPID.Target = 1; // 原地右转
+				if (adjust_timer_ms > 350)
+				{
+					adjust_step = 4;
+					adjust_timer_ms = 0;
+				}
+				break;
+
+			case 4: // 步骤 4：缓慢往后开同时找全黑线
+				SpeedPID.Target = -MIN_SPEED;
+				TurnPID.Target = 0;
+
+				// 🌟 找到全黑线，校准成功！退出状态机
+				if (RxCmd == 1)
+				{
+					ConFlag = 0;	 // 恢复正常巡线
+					adjust_step = 0; // 重置步骤
+					PID_Init(&SpeedPID);
+					PID_Init(&TurnPID);
+				}
+				// 如果往前找了 600ms 还没碰到全黑线，重来！
+				else if (adjust_timer_ms > 50)
+				{
+					adjust_timer_ms = 0;
+					SpeedPID.Target = MIN_SPEED;
+					TurnPID.Target = 0;
+
+					// 🌟 找到全黑线，校准成功！退出状态机
+					if (RxCmd == 1)
+					{
+						ConFlag = 0;	 // 恢复正常巡线
+						adjust_step = 0; // 重置步骤
+						PID_Init(&SpeedPID);
+						PID_Init(&TurnPID);
+					}
+					// 如果往前找了 600ms 还没碰到全黑线，重来！
+					else if (adjust_timer_ms > 100)
+					{
+						adjust_step = 1; // 回到步骤 1：继续向左调整
+						adjust_timer_ms = 0;
+					}
+				}
+				break;
+			}
+		}
 		// 非直角弯进行寻路模式
 		else
 		{
-			if (RxCmd == 8)
-			{
-				ConFlag = 1; // 触发右转 (下个循环立马开始转)
-			}
-			else if (RxCmd == 9)
-			{
-				ConFlag = 2; // 触发左转 (下个循环立马开始转)
-			}
-			else if (RxCmd == 2) // 真·丢线
+			// if (RxCmd == 8)
+			// {
+			// 	ConFlag = 1; // 触发右转 (下个循环立马开始转)
+			// }
+			// else if (RxCmd == 9)
+			// {
+			// 	ConFlag = 2; // 触发左转 (下个循环立马开始转)
+			// }
+			if (RxCmd == 2) // 真·丢线
 			{
 				SpeedPID.Target = MIN_SPEED;
 				TurnPID.Target = 0;
 			}
-			else if(RxCmd == 1) // 全黑任务
+			else if (RxCmd == 1) // 全黑任务
 			{
 				ConFlag = 3;
 			}
@@ -386,21 +560,45 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				// 👇 在收到数据的一瞬间捕捉直角信号
 				if (ConFlag == 0) // 只有在直线状态下才检测
 				{
-					if (RxCmd == 8)
+					if (RxCmd == 8 && adjust_flag == 0)
 					{
 						ConFlag = 1;
+						adjust_flag = 1;
 						PID_Init(&SpeedPID); // 👈 只在这里初始化一次！
 						PID_Init(&TurnPID);
 					}
-					else if (RxCmd == 9)
+					else if (RxCmd == 9 && adjust_flag == 0)
 					{
 						ConFlag = 2;
+						adjust_flag = 1;
 						PID_Init(&SpeedPID); // 👈 只在这里初始化一次！
 						PID_Init(&TurnPID);
+					}
+					else if (RxCmd == 8 && adjust_flag == 1 && ConFlag != 4 && ConFlag != 5)
+					{
+						PID_Init(&SpeedPID); // 停车前清空累计误差
+						PID_Init(&TurnPID);
+						ConFlag = 4;
+						adjust_step = 0;	 // 从第0步开始
+						adjust_timer_ms = 0; // 计时器清零
+					}
+					// 👇👇👇 这里是新增的：捕捉偏右(误判左直角)信号
+					else if (RxCmd == 9 && adjust_flag == 1 && ConFlag != 4 && ConFlag != 5)
+					{
+						// 触发偏右校准
+						PID_Init(&SpeedPID);
+						PID_Init(&TurnPID);
+						ConFlag = 5;
+						adjust_step = 0;
+						adjust_timer_ms = 0;
 					}
 				}
 			}
 		}
 		time_count = TIM_GetCounter(TIM1);
+
+		// 👇 修改：校准动作毫秒计时器 (包含 4 和 5 两个状态)
+		if (ConFlag == 4 || ConFlag == 5)
+			adjust_timer_ms++;
 	}
 }
