@@ -18,10 +18,12 @@ float VISION_KI = 0;		 // 积分系数，需要从很小的值慢慢调大
 float VISION_KD = 2.5;		 // 👇 新增：微分系数 (一般比 P 小一点)
 float TURN_GAIN = 0.5;
 float SPEED_DROP_K = 5.0;
+uint8_t all_black_flag = 0;
+uint8_t send_item_flag = 0;
 
 // --- 巡线参数配置 ---
 #define BASE_SPEED 1.86 // 基础直道速度 (可以比原来设高一点)
-#define MIN_SPEED 1.0  // 弯道最低速度
+#define MIN_SPEED 1.0	// 弯道最低速度
 // #define TURN_GAIN       0.5   // 转向灵敏度 (将视觉误差转化为 TurnTarget 的系数)
 // #define SPEED_DROP_K    1.0   // 减速系数 (误差越大，减速越明显)
 
@@ -63,47 +65,52 @@ int main(void)
 	{
 		KeyNum = Key_GetNum();
 
-		if (KeyNum == 1) // 按键1控制启停
+		// 按键启动
+		if (KeyNum == 1)
 		{
 			if (RunFlag == 0)
 			{
-				PID_Init(&SpeedPID); // 清零PID，防止启动前较大的积分累计
-				PID_Init(&TurnPID);	 // 清零PID，防止启动前较大的积分累计
+				PID_Init(&SpeedPID);
+				PID_Init(&TurnPID);
+				Vision_Error_Integral = 0;
+				Last_Vision_Error = 0;
+				Encoder_Get(1);
+				Encoder_Get(2);
+				ConFlag = 0;
 				SpeedPID.Target = COMMONSPEED;
 				DifPWM = 0;
 				AvgPWM = 0;
 				RxCmd = 2;
 				RunFlag = 1;
+				all_black_flag = 0;
+				send_item_flag = 0;
 			}
 			else
 			{
 				RunFlag = 0;
 			}
 		}
-
 		if (RunFlag)
 			LED_ON();
 		else
-			LED_OFF(); // 灯亮表示pid工作
+			LED_OFF();
 
-		// --- 2. 根据当前状态，决定车子怎么动 ---
-		if (ConFlag == 1)
+		// 判断是否为全黑情况(优于直角弯)
+
+		// 判断是否直角弯
+		if (ConFlag == 1) // 右转
 		{
-			// 正在右转
 			SpeedPID.Target = 0;
 			TurnPID.Target = 2;
 		}
-		else if (ConFlag == 2)
+		else if (ConFlag == 2) // 左转
 		{
-			// 正在左转
 			SpeedPID.Target = 0;
 			TurnPID.Target = -2;
 		}
+		// 非直角弯进行寻路模式
 		else
 		{
-			// 【ConFlag == 0 时，执行正常寻路逻辑】
-
-			// 只有在没转弯的时候，才去接收新的直角指令或处理丢线
 			if (RxCmd == 8)
 			{
 				ConFlag = 1; // 触发右转 (下个循环立马开始转)
@@ -116,6 +123,10 @@ int main(void)
 			{
 				SpeedPID.Target = MIN_SPEED;
 				TurnPID.Target = 0;
+			}
+			else if(RxCmd == 1) // 全黑任务
+			{
+				ConFlag = 3;
 			}
 			else
 			{
@@ -254,7 +265,7 @@ int main(void)
 
 void TIM1_UP_IRQHandler(void) // 1ms进入一次
 {
-	static uint8_t CountSpeedTurn = 0, CountControl = 0;
+	static uint8_t CountSpeedTurn = 0, CountControl = 0, speed_flag = 1, speed_flag_count = 0;
 
 	if (TIM_GetITStatus(TIM1, TIM_IT_Update) == SET)
 	{
@@ -264,6 +275,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 		// 计数器累加
 		CountSpeedTurn++;
 		CountControl++;
+		speed_flag_count++;
 
 		// 按键
 		Key_Tick();
@@ -310,6 +322,12 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 			}
 		}
 
+		// // 初始速度动态调节
+		// if (speed_flag_count >= 5 && speed_flag == 1)
+		// {
+		// 	speed_flag = 0;
+		// }
+
 		// 处理下位机通信信息 (提高频率，每 10ms 或 20ms 处理一次)
 		if (CountControl >= 1)
 		{
@@ -318,6 +336,40 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 			if (Serial_GetRxFlag() == 1)
 			{
 				RxCmd = Serial_GetRxData();
+
+				if (RxCmd == 1 && all_black_flag == 0)
+				{
+					all_black_flag = 1;
+				}
+				else if (RxCmd == 1 && all_black_flag == 1)
+				{
+					SpeedPID.Target = MIN_SPEED;
+				}
+				else if (RxCmd != 1 && all_black_flag == 1)
+				{
+					all_black_flag = 2;
+				}
+				else if (RxCmd == 1 && all_black_flag == 2) // 开启投放货物流程(代码暂定)
+				{
+					send_item_flag = 1;
+					if (1)
+					{
+						send_item_flag = 0;
+						all_black_flag = 3;
+					}
+				}
+				else if (RxCmd == 1 && all_black_flag == 3)
+				{
+					SpeedPID.Target = MIN_SPEED;
+				}
+				else if (RxCmd != 1 && all_black_flag == 3)
+				{
+					all_black_flag = 4;
+				}
+				else if (RxCmd == 1 && all_black_flag == 4)
+				{
+					RunFlag = 0;
+				}
 
 				// --- 1. 最高优先级：判断是否该退出直角转弯 ---
 				if (ConFlag != 0 && RxCmd == 3)
