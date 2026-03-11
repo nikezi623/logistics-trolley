@@ -124,7 +124,7 @@ int main(void)
 				SpeedPID.Target = MIN_SPEED;
 				TurnPID.Target = 0;
 			}
-			else if(RxCmd == 1) // 全黑任务
+			else if (RxCmd == 1) // 全黑任务
 			{
 				ConFlag = 3;
 			}
@@ -181,6 +181,7 @@ int main(void)
 		OLED_Printf(74, 40, OLED_6X8, "%+05.2f", VISION_KD);
 		OLED_Printf(74, 48, OLED_6X8, "%+05.2f", TURN_GAIN);
 		OLED_Printf(74, 56, OLED_6X8, "%+05.2f", SPEED_DROP_K);
+		OLED_Printf(76, 0, OLED_8X16, "Rxd:%d", RxCmd);
 
 		// 输出编译
 		//  OLED_Printf(56, 56, OLED_6X8, "Offset:%02.0f", AnglePID.Offset);
@@ -372,7 +373,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				}
 
 				// --- 1. 最高优先级：判断是否该退出直角转弯 ---
-				if (ConFlag != 0 && RxCmd == 3)
+				if (ConFlag != 0 && (RxCmd == 31 || RxCmd == 32 || RxCmd == 33))
 				{
 					ConFlag = 0;
 
