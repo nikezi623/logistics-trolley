@@ -30,7 +30,7 @@ double LeftSpeed, RightSpeed, AvgSpeed, DifSpeed;
 // 4. PID 与 巡线控制参数
 // ==========================================
 #define COMMONSPEED 4
-#define BASE_SPEED 3.86 // 基础直道速度
+#define BASE_SPEED 3.66 // 基础直道速度
 #define MIN_SPEED 1.86	// 弯道最低速度
 
 float VISION_KI = 0;	  // 视觉误差积分系数 (从0慢慢调)
@@ -312,6 +312,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					
 					if (DelayCount >= 2000) // 预留投放逻辑
 					{
+						DelayCount = 0;
 						send_item_flag = 0;
 						all_black_flag = 3;
 					}
