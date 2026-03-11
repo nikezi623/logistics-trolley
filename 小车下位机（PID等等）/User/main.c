@@ -3,13 +3,14 @@
 // ==========================================
 // 1. 系统状态与标志位
 // ==========================================
-uint8_t RunFlag = 0;		  // 运行启停标志位 (0:停止, 1:运行)
-uint8_t ConFlag = 0;		  // 转向状态 (0:正常巡线, 1:右直角, 2:左直角, 3:全黑)
-uint8_t all_black_flag = 0;	  // 全黑任务状态机阶段
-uint8_t send_item_flag = 0;	  // 投放货物触发标志
-uint8_t KeyNum = 0;			  // 按键键值
-uint16_t time_count = 0;	  // 定时器计数
-uint8_t have_turned_flag = 0; // 已经转过直角弯的标志位
+uint8_t RunFlag = 0;			// 运行启停标志位 (0:停止, 1:运行)
+uint8_t ConFlag = 0;			// 转向状态 (0:正常巡线, 1:右直角, 2:左直角, 3:全黑)
+uint8_t all_black_flag = 0;		// 全黑任务状态机阶段
+uint8_t send_item_flag = 0;		// 投放货物触发标志
+uint8_t KeyNum = 0;				// 按键键值
+uint16_t time_count = 0;		// 定时器计数
+uint8_t have_turned_flag = 0;	// 已经转过直角弯的标志位
+uint8_t line_end_fine_flag = 0; // 巡线结束标志位
 
 // ==========================================
 // 2. 视觉传感器参数
@@ -29,8 +30,8 @@ double LeftSpeed, RightSpeed, AvgSpeed, DifSpeed;
 // 4. PID 与 巡线控制参数
 // ==========================================
 #define COMMONSPEED 4
-#define BASE_SPEED 1.86 // 基础直道速度
-#define MIN_SPEED 1.0	// 弯道最低速度
+#define BASE_SPEED 3.66 // 基础直道速度
+#define MIN_SPEED 1.86	// 弯道最低速度
 
 float VISION_KI = 0;	  // 视觉误差积分系数 (从0慢慢调)
 float VISION_KD = 2.5;	  // 视觉误差微分系数
@@ -84,6 +85,9 @@ int main(void)
 				RunFlag = 1;
 				all_black_flag = 0;
 				send_item_flag = 0;
+
+				have_turned_flag = 0;
+				line_end_fine_flag = 0;
 			}
 			else
 			{
@@ -96,54 +100,62 @@ int main(void)
 		else
 			LED_OFF();
 
-		// --- 核心运动控制目标计算 ---
-		if (ConFlag == 1) // 右直角转弯
+		if (line_end_fine_flag == 0)
 		{
-			SpeedPID.Target = 0;
-			TurnPID.Target = 2;
+			// --- 核心运动控制目标计算 ---
+			if (ConFlag == 1) // 右直角转弯
+			{
+				SpeedPID.Target = 0;
+				TurnPID.Target = 2;
+			}
+			else if (ConFlag == 2) // 左直角转弯
+			{
+				SpeedPID.Target = 0;
+				TurnPID.Target = -2;
+			}
+			else // 正常寻路模式
+			{
+				if (RxCmd == 2) // 真·丢线
+				{
+					SpeedPID.Target = MIN_SPEED;
+					TurnPID.Target = 0;
+				}
+				else if (RxCmd == 1) // 遇到全黑
+				{
+					ConFlag = 3;
+				}
+				else // 正常的 P+I+D 巡线逻辑
+				{
+					Vision_Error = Get_Vision_Error(RxCmd);
+
+					// 误差累加（积分）及限幅
+					Vision_Error_Integral += Vision_Error;
+					if (Vision_Error_Integral > 100)
+						Vision_Error_Integral = 100;
+					if (Vision_Error_Integral < -100)
+						Vision_Error_Integral = -100;
+
+					// 计算 D (微分)
+					float Vision_Derivative = Vision_Error - Last_Vision_Error;
+					Last_Vision_Error = Vision_Error;
+
+					// 计算速度目标值 (根据偏差减速)
+					double expected_speed = BASE_SPEED - (SPEED_DROP_K * fabs(Vision_Error));
+					if (expected_speed < MIN_SPEED)
+						expected_speed = MIN_SPEED;
+					SpeedPID.Target = expected_speed;
+
+					// 计算转向环目标值
+					TurnPID.Target = (Vision_Error * TURN_GAIN) +
+									 (Vision_Error_Integral * VISION_KI) +
+									 (Vision_Derivative * VISION_KD);
+				}
+			}
 		}
-		else if (ConFlag == 2) // 左直角转弯
+		else
 		{
-			SpeedPID.Target = 0;
-			TurnPID.Target = -2;
-		}
-		else // 正常寻路模式
-		{
-			if (RxCmd == 2) // 真·丢线
-			{
-				SpeedPID.Target = MIN_SPEED;
-				TurnPID.Target = 0;
-			}
-			else if (RxCmd == 1) // 遇到全黑
-			{
-				ConFlag = 3;
-			}
-			else // 正常的 P+I+D 巡线逻辑
-			{
-				Vision_Error = Get_Vision_Error(RxCmd);
-
-				// 误差累加（积分）及限幅
-				Vision_Error_Integral += Vision_Error;
-				if (Vision_Error_Integral > 100)
-					Vision_Error_Integral = 100;
-				if (Vision_Error_Integral < -100)
-					Vision_Error_Integral = -100;
-
-				// 计算 D (微分)
-				float Vision_Derivative = Vision_Error - Last_Vision_Error;
-				Last_Vision_Error = Vision_Error;
-
-				// 计算速度目标值 (根据偏差减速)
-				double expected_speed = BASE_SPEED - (SPEED_DROP_K * fabs(Vision_Error));
-				if (expected_speed < MIN_SPEED)
-					expected_speed = MIN_SPEED;
-				SpeedPID.Target = expected_speed;
-
-				// 计算转向环目标值
-				TurnPID.Target = (Vision_Error * TURN_GAIN) +
-								 (Vision_Error_Integral * VISION_KI) +
-								 (Vision_Derivative * VISION_KD);
-			}
+			SpeedPID.Target = MIN_SPEED;
+			TurnPID.Target = 0;
 		}
 
 		// --- OLED 屏幕显示 ---
@@ -217,7 +229,7 @@ int main(void)
 
 void TIM1_UP_IRQHandler(void) // 1ms进入一次
 {
-	static uint8_t CountSpeedTurn = 0, CountControl = 0;
+	static uint16_t CountSpeedTurn = 0, CountControl = 0, DelayCount = 0;
 
 	if (TIM_GetITStatus(TIM1, TIM_IT_Update) == SET)
 	{
@@ -226,6 +238,12 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 		CountSpeedTurn++;
 		CountControl++;
 		Key_Tick();
+
+		if (send_item_flag == 1)
+		{
+			DelayCount ++;
+
+		}
 
 		// --- 1. 速度环与转向环控制 (50ms 周期) ---
 		if (CountSpeedTurn >= 50)
@@ -283,14 +301,18 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				if (RxCmd == 1 && all_black_flag == 0)
 					all_black_flag = 1;
 				else if (RxCmd == 1 && all_black_flag == 1)
-					SpeedPID.Target = MIN_SPEED;
-				else if (RxCmd != 1 && all_black_flag == 1)
+					SpeedPID.Target = BASE_SPEED;
+				else if (RxCmd != 1 && (all_black_flag == 1))
 					all_black_flag = 2;
-				else if (RxCmd == 1 && all_black_flag == 2)
+				else if ((RxCmd == 1 || line_end_fine_flag == 1) && (all_black_flag == 2))
 				{
 					send_item_flag = 1;
-					if (1) // 预留投放逻辑
+					PID_Init(&SpeedPID);
+					PID_Init(&TurnPID);
+					
+					if (DelayCount >= 2000) // 预留投放逻辑
 					{
+						DelayCount = 0;
 						send_item_flag = 0;
 						all_black_flag = 3;
 					}
@@ -318,17 +340,21 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					if (RxCmd == 8)
 					{
 						ConFlag = 1; // 右直角
-						have_turned_flag = 0;
+						have_turned_flag = 1;
 						PID_Init(&SpeedPID);
 						PID_Init(&TurnPID);
 					}
 					else if (RxCmd == 9)
 					{
 						ConFlag = 2; // 左直角
-						have_turned_flag = 0;
+						have_turned_flag = 1;
 						PID_Init(&SpeedPID);
 						PID_Init(&TurnPID);
 					}
+				}
+				else if (ConFlag == 0 && (RxCmd == 8 || RxCmd == 9 || RxCmd == 1) && have_turned_flag == 1)
+				{
+					line_end_fine_flag = 1;
 				}
 			}
 		}
