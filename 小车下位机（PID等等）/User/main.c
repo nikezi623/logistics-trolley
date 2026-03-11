@@ -3,12 +3,13 @@
 // ==========================================
 // 1. 系统状态与标志位
 // ==========================================
-uint8_t RunFlag = 0;		// 运行启停标志位 (0:停止, 1:运行)
-uint8_t ConFlag = 0;		// 转向状态 (0:正常巡线, 1:右直角, 2:左直角, 3:全黑)
-uint8_t all_black_flag = 0; // 全黑任务状态机阶段
-uint8_t send_item_flag = 0; // 投放货物触发标志
-uint8_t KeyNum = 0;			// 按键键值
-uint16_t time_count = 0;	// 定时器计数
+uint8_t RunFlag = 0;		  // 运行启停标志位 (0:停止, 1:运行)
+uint8_t ConFlag = 0;		  // 转向状态 (0:正常巡线, 1:右直角, 2:左直角, 3:全黑)
+uint8_t all_black_flag = 0;	  // 全黑任务状态机阶段
+uint8_t send_item_flag = 0;	  // 投放货物触发标志
+uint8_t KeyNum = 0;			  // 按键键值
+uint16_t time_count = 0;	  // 定时器计数
+uint8_t have_turned_flag = 0; // 已经转过直角弯的标志位
 
 // ==========================================
 // 2. 视觉传感器参数
@@ -312,17 +313,19 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				}
 
 				// 2.3 捕捉进入直角转弯信号
-				if (ConFlag == 0)
+				if (ConFlag == 0 && have_turned_flag == 0)
 				{
 					if (RxCmd == 8)
 					{
 						ConFlag = 1; // 右直角
+						have_turned_flag = 0;
 						PID_Init(&SpeedPID);
 						PID_Init(&TurnPID);
 					}
 					else if (RxCmd == 9)
 					{
 						ConFlag = 2; // 左直角
+						have_turned_flag = 0;
 						PID_Init(&SpeedPID);
 						PID_Init(&TurnPID);
 					}
