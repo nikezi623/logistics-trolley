@@ -301,7 +301,10 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				if (RxCmd == 1 && all_black_flag == 0)
 					all_black_flag = 1;
 				else if (RxCmd == 1 && all_black_flag == 1)
+				{
 					SpeedPID.Target = BASE_SPEED;
+					TurnPID.Target = 0;
+				}
 				else if (RxCmd != 1 && (all_black_flag == 1))
 					all_black_flag = 2;
 				else if ((RxCmd == 1 || line_end_fine_flag == 1) && (all_black_flag == 2))

@@ -88,14 +88,14 @@ int main(void)
         {
             Serial_SendByte(51);
         }
-        else if (SensorStatus == 0xFC)
-        {
-            Serial_SendByte(52);
-        }
-        else if (SensorStatus == 0xFE)
-        {
-            Serial_SendByte(53);
-        }
+        // else if (SensorStatus == 0xFC)
+        // {
+        //     Serial_SendByte(52);
+        // }
+        // else if (SensorStatus == 0xFE)
+        // {
+        //     Serial_SendByte(53);
+        // }
 
         // 轻微偏左 (6)
         // 0xCF(1100 1111): 61 (Bit4 和 Bit5 踩线)
@@ -122,14 +122,14 @@ int main(void)
         {
             Serial_SendByte(71);
         }
-        else if (SensorStatus == 0x3F)
-        {
-            Serial_SendByte(72);
-        }
-        else if (SensorStatus == 0x7F)
-        {
-            Serial_SendByte(73);
-        }
+        // else if (SensorStatus == 0x3F)
+        // {
+        //     Serial_SendByte(72);
+        // }
+        // else if (SensorStatus == 0x7F)
+        // {
+        //     Serial_SendByte(73);
+        // }
         // 出线/丢线 (2)
         else if (SensorStatus == 0xFF)
         {
@@ -137,7 +137,7 @@ int main(void)
         }
 
         // 全黑 (0)
-        else if (SensorStatus == 0x00)
+        else if (SensorStatus == 0x00 || SensorStatus == 0x80 || SensorStatus == 0x81 || SensorStatus == 0x1)
         {
             Serial_SendByte(1);
         }
