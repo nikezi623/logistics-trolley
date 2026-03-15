@@ -58,6 +58,34 @@ PID_t TurnPID = {
 	.ErrorIntMin = -20,
 };
 
+// 参数显示函数
+void Show_parameter(void)
+{
+	OLED_Clear();
+	OLED_Printf(0, 0, OLED_6X8, "Speed");
+	OLED_Printf(0, 8, OLED_6X8, "%05.2f", SpeedPID.Kp);
+	OLED_Printf(0, 16, OLED_6X8, "%05.2f", SpeedPID.Ki);
+	OLED_Printf(0, 24, OLED_6X8, "%05.2f", SpeedPID.Kd);
+	OLED_Printf(0, 32, OLED_6X8, "%+05.2f", SpeedPID.Target);
+	OLED_Printf(0, 40, OLED_6X8, "%+05.2f", AvgSpeed);
+	OLED_Printf(0, 48, OLED_6X8, "%+05.2f", SpeedPID.Out);
+
+	OLED_Printf(38, 0, OLED_6X8, "Turn");
+	OLED_Printf(38, 8, OLED_6X8, "%05.2f", TurnPID.Kp);
+	OLED_Printf(38, 16, OLED_6X8, "%05.2f", TurnPID.Ki);
+	OLED_Printf(38, 24, OLED_6X8, "%05.2f", TurnPID.Kd);
+	OLED_Printf(38, 32, OLED_6X8, "%+05.2f", TurnPID.Target);
+	OLED_Printf(38, 40, OLED_6X8, "%+05.2f", DifSpeed);
+	OLED_Printf(38, 48, OLED_6X8, "%+05.2f", TurnPID.Out);
+	OLED_Printf(38, 56, OLED_6X8, "%+05.2f", TURN_GAIN);
+
+	OLED_Printf(74, 40, OLED_6X8, "%+05.2f", VISION_KD);
+	OLED_Printf(74, 48, OLED_6X8, "%+05.2f", TURN_GAIN);
+	OLED_Printf(74, 56, OLED_6X8, "%+05.2f", SPEED_DROP_K);
+	OLED_Printf(76, 0, OLED_8X16, "Rxd:%d", RxCmd);
+	OLED_Update();
+}
+
 int main(void)
 {
 	Init_All();
@@ -159,30 +187,8 @@ int main(void)
 		}
 
 		// --- OLED 屏幕显示 ---
-		OLED_Clear();
-		OLED_Printf(0, 0, OLED_6X8, "Speed");
-		OLED_Printf(0, 8, OLED_6X8, "%05.2f", SpeedPID.Kp);
-		OLED_Printf(0, 16, OLED_6X8, "%05.2f", SpeedPID.Ki);
-		OLED_Printf(0, 24, OLED_6X8, "%05.2f", SpeedPID.Kd);
-		OLED_Printf(0, 32, OLED_6X8, "%+05.2f", SpeedPID.Target);
-		OLED_Printf(0, 40, OLED_6X8, "%+05.2f", AvgSpeed);
-		OLED_Printf(0, 48, OLED_6X8, "%+05.2f", SpeedPID.Out);
-
-		OLED_Printf(38, 0, OLED_6X8, "Turn");
-		OLED_Printf(38, 8, OLED_6X8, "%05.2f", TurnPID.Kp);
-		OLED_Printf(38, 16, OLED_6X8, "%05.2f", TurnPID.Ki);
-		OLED_Printf(38, 24, OLED_6X8, "%05.2f", TurnPID.Kd);
-		OLED_Printf(38, 32, OLED_6X8, "%+05.2f", TurnPID.Target);
-		OLED_Printf(38, 40, OLED_6X8, "%+05.2f", DifSpeed);
-		OLED_Printf(38, 48, OLED_6X8, "%+05.2f", TurnPID.Out);
-		OLED_Printf(38, 56, OLED_6X8, "%+05.2f", TURN_GAIN);
-
-		OLED_Printf(74, 40, OLED_6X8, "%+05.2f", VISION_KD);
-		OLED_Printf(74, 48, OLED_6X8, "%+05.2f", TURN_GAIN);
-		OLED_Printf(74, 56, OLED_6X8, "%+05.2f", SPEED_DROP_K);
-		OLED_Printf(76, 0, OLED_8X16, "Rxd:%d", RxCmd);
-		OLED_Update();
-
+		Show_parameter();
+		
 		// --- 蓝牙数据打印与接收解析 ---
 		BlueSerial_Printf("[plot,%f, %f, %f, %f]", SpeedPID.Actual, SpeedPID.Target, TurnPID.Actual, TurnPID.Target);
 		BlueSerial_Printf("SpA:%f SpT:%f TuA:%f TuT:%f", SpeedPID.Actual, SpeedPID.Target, TurnPID.Actual, TurnPID.Target);
@@ -241,8 +247,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 
 		if (send_item_flag == 1)
 		{
-			DelayCount ++;
-
+			DelayCount++;
 		}
 
 		// --- 1. 速度环与转向环控制 (50ms 周期) ---
@@ -312,7 +317,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					send_item_flag = 1;
 					PID_Init(&SpeedPID);
 					PID_Init(&TurnPID);
-					
+
 					if (DelayCount >= 2000) // 预留投放逻辑
 					{
 						DelayCount = 0;
