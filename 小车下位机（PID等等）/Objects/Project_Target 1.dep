@@ -897,13 +897,13 @@ I (.\Library\stm32f10x_tim.h)(0x4D783BB4)
 I (.\Library\stm32f10x_usart.h)(0x4D783BB4)
 I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
-I (Hardware\OLED.h)(0x6714EDC0)
+I (Hardware\OLED.h)(0x69B6284A)
 I (Hardware\OLED_Data.h)(0x6714EE44)
 I (D:\K32\ARM\ARMCC\include\string.h)(0x588B8344)
 I (D:\K32\ARM\ARMCC\include\math.h)(0x588B8344)
 I (D:\K32\ARM\ARMCC\include\stdio.h)(0x588B8344)
 I (D:\K32\ARM\ARMCC\include\stdarg.h)(0x588B8344)
-F (.\Hardware\OLED.h)(0x6714EDC0)()
+F (.\Hardware\OLED.h)(0x69B6284A)()
 F (.\Hardware\OLED_Data.c)(0x6714EE46)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\oled_data.o --omf_browse .\objects\oled_data.crf --depend .\objects\oled_data.d)
 I (Hardware\OLED_Data.h)(0x6714EE44)
 I (D:\K32\ARM\ARMCC\include\stdint.h)(0x588B8344)
@@ -1158,7 +1158,7 @@ I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
 I (D:\K32\ARM\ARMCC\include\stdio.h)(0x588B8344)
 I (D:\K32\ARM\ARMCC\include\stdarg.h)(0x588B8344)
-F (.\User\main.c)(0x69B13975)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
+F (.\User\main.c)(0x69B63092)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
 I (User\PHC_HeadFile.h)(0x697DD515)
 I (.\Start\stm32f10x.h)(0x4D783CB4)
 I (.\Start\core_cm3.h)(0x4D523B58)
@@ -1189,7 +1189,7 @@ I (.\Library\stm32f10x_usart.h)(0x4D783BB4)
 I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
 I (.\System\Delay.h)(0x6130920D)
-I (.\Hardware\OLED.h)(0x6714EDC0)
+I (.\Hardware\OLED.h)(0x69B6284A)
 I (.\Hardware\OLED_Data.h)(0x6714EE44)
 I (.\Hardware\LED.h)(0x69624F82)
 I (.\System\Timer.h)(0x61F11D95)
@@ -1300,7 +1300,7 @@ I (.\Library\stm32f10x_usart.h)(0x4D783BB4)
 I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
 I (.\System\Delay.h)(0x6130920D)
-I (.\Hardware\OLED.h)(0x6714EDC0)
+I (.\Hardware\OLED.h)(0x69B6284A)
 I (.\Hardware\OLED_Data.h)(0x6714EE44)
 I (.\Hardware\LED.h)(0x69624F82)
 I (.\System\Timer.h)(0x61F11D95)
