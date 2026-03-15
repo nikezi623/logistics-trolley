@@ -55,15 +55,15 @@ PID_t SpeedPID = {
 	.ErrorIntMin = -150,
 };
 
-PID_t TurnPID = {
-	.Kp = 6.00,
-	.Ki = 2.00,
-	.Kd = 0.00,
-	.OutMax = 100,
-	.OutMin = -100,
-	.ErrorIntMax = 20,
-	.ErrorIntMin = -20,
-};
+// PID_t TurnPID = {
+// 	.Kp = 6.00,
+// 	.Ki = 2.00,
+// 	.Kd = 0.00,
+// 	.OutMax = 100,
+// 	.OutMin = -100,
+// 	.ErrorIntMax = 20,
+// 	.ErrorIntMin = -20,
+// };
 
 // 用于正常巡线的视觉差速 PID (采用你第一版的参数)
 PID_t TurnPID_Vision = {
@@ -179,12 +179,12 @@ int main(void)
 			if (ConFlag == 1) // 右直角转弯
 			{
 				SpeedPID.Target = 0;
-				TurnPID_Gyro.Target = 2;
+				TurnPID_Vision.Target = 2;
 			}
 			else if (ConFlag == 2) // 左直角转弯
 			{
 				SpeedPID.Target = 0;
-				TurnPID_Gyro.Target = -2;
+				TurnPID_Vision.Target = -2;
 			}
 			else // 正常寻路模式
 			{
@@ -219,7 +219,7 @@ int main(void)
 					SpeedPID.Target = expected_speed;
 
 					// 计算转向环目标值
-					Vision_DifSpeed_Target = (Vision_Error * TURN_GAIN) +
+					TurnPID_Vision.Target = (Vision_Error * TURN_GAIN) +
 											 (Vision_Error_Integral * VISION_KI) +
 											 (Vision_Derivative * VISION_KD);
 				}
@@ -228,7 +228,7 @@ int main(void)
 		else
 		{
 			SpeedPID.Target = MIN_SPEED;
-			TurnPID.Target = 0;
+			TurnPID_Vision.Target = 0;
 		}
 
 		// --- OLED 屏幕显示 ---
@@ -239,8 +239,6 @@ int main(void)
 void TIM1_UP_IRQHandler(void) // 1ms进入一次
 {
 	static uint16_t CountSpeedTurn = 0, CountControl = 0, DelayCount = 0;
-	static uint16_t Calibrate_Count = 0; // 用于记录校准次数
-	static int32_t Calibrate_Sum = 0;	 // 用于累加零偏数据
 
 	if (TIM_GetITStatus(TIM1, TIM_IT_Update) == SET)
 	{
@@ -285,7 +283,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				}
 				else
 				{
-					TurnPID_Vision.Target = Vision_DifSpeed_Target; // 视觉算出的预期差速
+					// TurnPID_Vision.Target = Vision_DifSpeed_Target; // 视觉算出的预期差速
 					TurnPID_Vision.Actual = DifSpeed;				// 编码器实时差速
 					PID_Update(&TurnPID_Vision);
 					DifPWM = TurnPID_Vision.Out; // 视觉闭环输出
@@ -390,7 +388,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 						is_startup_flag = 0;
 						have_turned_flag = 1;
 						PID_Init(&SpeedPID); // ⚠️ 切换模式，重置陀螺仪 PID
-						PID_Init(&TurnPID_Gyro);
+						PID_Init(&TurnPID_Vision);
 					}
 					else if (RxCmd == 9)
 					{
@@ -398,7 +396,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 						is_startup_flag = 0;
 						have_turned_flag = 1;
 						PID_Init(&SpeedPID); // ⚠️ 切换模式，重置陀螺仪 PID
-						PID_Init(&TurnPID_Gyro);
+						PID_Init(&TurnPID_Vision);
 					}
 				}
 				else if (ConFlag == 0 && (RxCmd == 8 || RxCmd == 9 || RxCmd == 1) && have_turned_flag == 1)
