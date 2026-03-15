@@ -30,18 +30,20 @@ double LeftSpeed, RightSpeed, AvgSpeed, DifSpeed;
 // 4. PID 与 巡线控制参数
 // ==========================================
 #define COMMONSPEED 4
-#define BASE_SPEED 3.66 // 基础直道速度
+#define BASE_SPEED 2.86 // 基础直道速度
 #define MIN_SPEED 1.86	// 弯道最低速度
 
-float VISION_KI = 0;	  // 视觉误差积分系数 (从0慢慢调)
+float VISION_KI = 0.05;	  // 视觉误差积分系数 (从0慢慢调)
 float VISION_KD = 2.5;	  // 视觉误差微分系数
-float TURN_GAIN = 20;	  // 转向环灵敏度增益
-float SPEED_DROP_K = 5.0; // 弯道减速系数
+float TURN_GAIN = 4.66;	  // 转向环灵敏度增益
+float SPEED_DROP_K = 1.3; // 弯道减速系数
 
 int16_t GyroZ_Offset = 0;	  // 零偏值
 float YawAngle = 0.0f;		  // 偏航角
 uint8_t Gyro_Cal_Done = 0;	  // 校准完成标志位 (0:未完成, 1:已完成)
 float Target_YawAngle = 0.0f; // 【新增】视觉给出的目标角度
+float real_gz = 0;
+float Base_Yaw = 0.0f; // 【新增】当前行驶的基准方向 (0, 90, -90 等)
 
 PID_t SpeedPID = {
 	.Kp = 4.00,
@@ -54,9 +56,9 @@ PID_t SpeedPID = {
 };
 
 PID_t TurnPID = {
-	.Kp = 6.00,
-	.Ki = 2.00,
-	.Kd = 0.00,
+	.Kp = 1.86,
+	.Ki = 0.00,
+	.Kd = 0.5,
 	.OutMax = 100,
 	.OutMin = -100,
 	.ErrorIntMax = 20,
@@ -79,8 +81,8 @@ void Show_parameter(void)
 	OLED_Printf(38, 8, OLED_6X8, "%05.2f", TurnPID.Kp);
 	OLED_Printf(38, 16, OLED_6X8, "%05.2f", TurnPID.Ki);
 	OLED_Printf(38, 24, OLED_6X8, "%05.2f", TurnPID.Kd);
-	OLED_Printf(38, 32, OLED_6X8, "%+05.2f", TurnPID.Target);
-	OLED_Printf(38, 40, OLED_6X8, "%+05.2f", DifSpeed);
+	OLED_Printf(38, 32, OLED_6X8, "%+05.2f", real_gz);
+	OLED_Printf(38, 40, OLED_6X8, "%+05.2f", YawAngle);
 	OLED_Printf(38, 48, OLED_6X8, "%+05.2f", TurnPID.Out);
 	OLED_Printf(38, 56, OLED_6X8, "%+05.2f", TURN_GAIN);
 
@@ -144,6 +146,8 @@ int main(void)
 
 				YawAngle = 0.0f;		// 【新增】起跑瞬间，当前角度认为是绝对 0 度
 				Target_YawAngle = 0.0f; // 【新增】目标角度也是 0 度（直走）
+				Base_Yaw = 0.0f;		// 【新增】起步基准是绝对 0 度
+				real_gz = 0;
 			}
 			else
 			{
@@ -162,19 +166,19 @@ int main(void)
 			if (ConFlag == 1) // 右直角转弯
 			{
 				SpeedPID.Target = 0;
-				TurnPID.Target = 60.0f;
+				Target_YawAngle = Base_Yaw;
 			}
 			else if (ConFlag == 2) // 左直角转弯
 			{
 				SpeedPID.Target = 0;
-				TurnPID.Target = -60.0f;
+				Target_YawAngle = Base_Yaw;
 			}
 			else // 正常寻路模式
 			{
 				if (RxCmd == 2) // 真·丢线
 				{
 					SpeedPID.Target = MIN_SPEED;
-					Target_YawAngle = 0.0f; // 【修改】丢线了就保持 0 度直走！防止乱甩
+					Target_YawAngle = Base_Yaw;
 				}
 				else if (RxCmd == 1) // 遇到全黑
 				{
@@ -202,16 +206,16 @@ int main(void)
 					SpeedPID.Target = expected_speed;
 
 					// 计算转向环目标值
-					Target_YawAngle = (Vision_Error * TURN_GAIN) +
-									  (Vision_Error_Integral * VISION_KI) +
-									  (Vision_Derivative * VISION_KD);
+					Target_YawAngle = Base_Yaw - ((Vision_Error * TURN_GAIN) +
+												  (Vision_Error_Integral * VISION_KI) +
+												  (Vision_Derivative * VISION_KD));
 				}
 			}
 		}
 		else
 		{
 			SpeedPID.Target = MIN_SPEED;
-			Target_YawAngle = 0.0f; // 停车或寻线结束，目标角度归零
+			// Target_YawAngle = 0.0f; // 停车或寻线结束，目标角度归零
 		}
 
 		// --- OLED 屏幕显示 ---
@@ -290,32 +294,20 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				Gyro_Cal_Done = 1;					// 标记校准完成！
 			}
 
-			if (send_item_flag == 1)
-			{
-				DelayCount++;
-			}
-
 			// 校准期间，直接退出中断后面的逻辑，不执行电机控制
 			time_count = TIM_GetCounter(TIM1);
 			return;
+		}
+
+		if (send_item_flag == 1)
+		{
+			DelayCount++;
 		}
 
 		// --- 1. 速度环与转向环控制 (50ms 周期) ---
 		if (CountSpeedTurn >= 50)
 		{
 			CountSpeedTurn = 0;
-
-			// 扣除零偏，得到真实的角速度
-			int16_t real_gz = gz - GyroZ_Offset;
-
-			// 死区过滤：剔除极其微小的底盘震动静差
-			if (real_gz >= -2 && real_gz <= 2)
-			{
-				real_gz = 0;
-			}
-
-			// 转化为角速度并积分 (假设满量程 ±2000°/s，灵敏度 16.4 LSB/°/s)
-			YawAngle += ((float)real_gz / 16.4f) * 0.001f;
 
 			LeftSpeed = Encoder_Get(1) / 44.0 / 0.05 / 9.27666;
 			RightSpeed = Encoder_Get(2) / 44.0 / 0.05 / 9.27666;
@@ -331,7 +323,16 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				TurnPID.Target = Target_YawAngle; // 目标值：来自 main 函数视觉算出的角度
 				TurnPID.Actual = YawAngle;		  // 实际值：来自 1ms 中断陀螺仪积分的角度
 				PID_Update(&TurnPID);
-				DifPWM = TurnPID.Out; // 输出值：为了追平角度差，需要的电机差速 PWM
+				DifPWM = -TurnPID.Out; // 输出值：为了追平角度差，需要的电机差速 PWM
+
+				if (ConFlag == 1 || ConFlag == 2)
+				{
+					int16_t MAX_TURN_PWM = 15; // 限制转弯时的最高占空比 (可根据实际抓地力调，建议30-40)
+					if (DifPWM > MAX_TURN_PWM)
+						DifPWM = MAX_TURN_PWM;
+					if (DifPWM < -MAX_TURN_PWM)
+						DifPWM = -MAX_TURN_PWM;
+				}
 
 				LeftPWM = AvgPWM + DifPWM;
 				RightPWM = AvgPWM - DifPWM;
@@ -361,6 +362,18 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 		{
 			CountControl = 0;
 
+			// 扣除零偏，得到真实的角速度
+			real_gz = gz - GyroZ_Offset;
+
+			// 死区过滤：剔除极其微小的底盘震动静差
+			if (real_gz >= -2 && real_gz <= 2)
+			{
+				real_gz = 0;
+			}
+
+			// 转化为角速度并积分 (假设满量程 ±2000°/s，灵敏度 16.4 LSB/°/s)
+			YawAngle += ((float)real_gz / 16.4f) * 0.001f;
+
 			if (Serial_GetRxFlag() == 1)
 			{
 				RxCmd = Serial_GetRxData();
@@ -371,15 +384,15 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				else if (RxCmd == 1 && all_black_flag == 1)
 				{
 					SpeedPID.Target = BASE_SPEED;
-					TurnPID.Target = 0;
+					TurnPID.Target = Base_Yaw;
 				}
 				else if (RxCmd != 1 && (all_black_flag == 1))
 					all_black_flag = 2;
 				else if ((RxCmd == 1 || line_end_fine_flag == 1) && (all_black_flag == 2))
 				{
 					send_item_flag = 1;
-					PID_Init(&SpeedPID);
-					PID_Init(&TurnPID);
+					// PID_Init(&SpeedPID);
+					SpeedPID.Target = 0;
 
 					if (DelayCount >= 2000) // 预留投放逻辑
 					{
@@ -401,8 +414,8 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					ConFlag = 0;
 					Vision_Error_Integral = 0;
 					Last_Vision_Error = 0;
-					PID_Init(&SpeedPID);
-					PID_Init(&TurnPID);
+					// PID_Init(&SpeedPID);
+					SpeedPID.Target = COMMONSPEED;
 				}
 
 				// 2.3 捕捉进入直角转弯信号
@@ -414,6 +427,8 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 						have_turned_flag = 1;
 						PID_Init(&SpeedPID);
 						PID_Init(&TurnPID);
+						SpeedPID.Target = MIN_SPEED;
+						Base_Yaw = Base_Yaw - 90.0;
 					}
 					else if (RxCmd == 9)
 					{
@@ -421,6 +436,8 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 						have_turned_flag = 1;
 						PID_Init(&SpeedPID);
 						PID_Init(&TurnPID);
+						SpeedPID.Target = MIN_SPEED;
+						Base_Yaw = Base_Yaw + 90.0;
 					}
 				}
 				else if (ConFlag == 0 && (RxCmd == 8 || RxCmd == 9 || RxCmd == 1) && have_turned_flag == 1)
