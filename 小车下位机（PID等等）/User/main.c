@@ -35,8 +35,13 @@ double LeftSpeed, RightSpeed, AvgSpeed, DifSpeed;
 
 float VISION_KI = 0;	  // 视觉误差积分系数 (从0慢慢调)
 float VISION_KD = 2.5;	  // 视觉误差微分系数
-float TURN_GAIN = 0.5;	  // 转向环灵敏度增益
+float TURN_GAIN = 20;	  // 转向环灵敏度增益
 float SPEED_DROP_K = 5.0; // 弯道减速系数
+
+int16_t GyroZ_Offset = 0;	  // 零偏值
+float YawAngle = 0.0f;		  // 偏航角
+uint8_t Gyro_Cal_Done = 0;	  // 校准完成标志位 (0:未完成, 1:已完成)
+float Target_YawAngle = 0.0f; // 【新增】视觉给出的目标角度
 
 PID_t SpeedPID = {
 	.Kp = 4.00,
@@ -89,6 +94,26 @@ void Show_parameter(void)
 int main(void)
 {
 	Init_All();
+
+	// int16_t ax, ay, az, gx, gy, gz; // 陀螺仪六轴数值
+
+	// // --- 【新增】严格的陀螺仪 Z 轴零偏校准 ---
+	// int32_t z_sum = 0;
+
+	// LED_ON(); // 亮灯提示：正在校准，别动车！
+
+	// // 采集 200 次数据求平均，求得精确零偏
+	// for (int i = 0; i < 200; i++)
+	// {
+	// 	MPU6050_GetData(&ax, &ay, &az, &gx, &gy, &gz);
+	// 	z_sum += gz;
+	// 	Delay_ms(2); // 等待 MPU6050 数据更新 (具体根据你的滴答定时器延时函数来)
+	// }
+
+	// GyroZ_Offset = z_sum / 200; // 算出零偏！
+
+	// LED_OFF(); // 灭灯提示：校准完成，可以发车了！
+
 	while (1)
 	{
 		KeyNum = Key_GetNum();
@@ -116,6 +141,9 @@ int main(void)
 
 				have_turned_flag = 0;
 				line_end_fine_flag = 0;
+
+				YawAngle = 0.0f;		// 【新增】起跑瞬间，当前角度认为是绝对 0 度
+				Target_YawAngle = 0.0f; // 【新增】目标角度也是 0 度（直走）
 			}
 			else
 			{
@@ -134,19 +162,19 @@ int main(void)
 			if (ConFlag == 1) // 右直角转弯
 			{
 				SpeedPID.Target = 0;
-				TurnPID.Target = 2;
+				TurnPID.Target = 60.0f;
 			}
 			else if (ConFlag == 2) // 左直角转弯
 			{
 				SpeedPID.Target = 0;
-				TurnPID.Target = -2;
+				TurnPID.Target = -60.0f;
 			}
 			else // 正常寻路模式
 			{
 				if (RxCmd == 2) // 真·丢线
 				{
 					SpeedPID.Target = MIN_SPEED;
-					TurnPID.Target = 0;
+					Target_YawAngle = 0.0f; // 【修改】丢线了就保持 0 度直走！防止乱甩
 				}
 				else if (RxCmd == 1) // 遇到全黑
 				{
@@ -174,21 +202,21 @@ int main(void)
 					SpeedPID.Target = expected_speed;
 
 					// 计算转向环目标值
-					TurnPID.Target = (Vision_Error * TURN_GAIN) +
-									 (Vision_Error_Integral * VISION_KI) +
-									 (Vision_Derivative * VISION_KD);
+					Target_YawAngle = (Vision_Error * TURN_GAIN) +
+									  (Vision_Error_Integral * VISION_KI) +
+									  (Vision_Derivative * VISION_KD);
 				}
 			}
 		}
 		else
 		{
 			SpeedPID.Target = MIN_SPEED;
-			TurnPID.Target = 0;
+			Target_YawAngle = 0.0f; // 停车或寻线结束，目标角度归零
 		}
 
 		// --- OLED 屏幕显示 ---
 		Show_parameter();
-		
+
 		// --- 蓝牙数据打印与接收解析 ---
 		BlueSerial_Printf("[plot,%f, %f, %f, %f]", SpeedPID.Actual, SpeedPID.Target, TurnPID.Actual, TurnPID.Target);
 		BlueSerial_Printf("SpA:%f SpT:%f TuA:%f TuT:%f", SpeedPID.Actual, SpeedPID.Target, TurnPID.Actual, TurnPID.Target);
@@ -237,6 +265,9 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 {
 	static uint16_t CountSpeedTurn = 0, CountControl = 0, DelayCount = 0;
 
+	static uint16_t Calibrate_Count = 0; // 用于记录校准次数
+	static int32_t Calibrate_Sum = 0;	 // 用于累加零偏数据
+
 	if (TIM_GetITStatus(TIM1, TIM_IT_Update) == SET)
 	{
 		TIM_ClearITPendingBit(TIM1, TIM_IT_Update);
@@ -245,15 +276,46 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 		CountControl++;
 		Key_Tick();
 
-		if (send_item_flag == 1)
+		int16_t ax, ay, az, gx, gy, gz;
+		MPU6050_GetData(&ax, &ay, &az, &gx, &gy, &gz);
+
+		if (Gyro_Cal_Done == 0)
 		{
-			DelayCount++;
+			Calibrate_Sum += gz;
+			Calibrate_Count++;
+
+			if (Calibrate_Count >= 200) // 已经收集了 200 次 (耗时 200ms)
+			{
+				GyroZ_Offset = Calibrate_Sum / 200; // 算出平均零偏
+				Gyro_Cal_Done = 1;					// 标记校准完成！
+			}
+
+			if (send_item_flag == 1)
+			{
+				DelayCount++;
+			}
+
+			// 校准期间，直接退出中断后面的逻辑，不执行电机控制
+			time_count = TIM_GetCounter(TIM1);
+			return;
 		}
 
 		// --- 1. 速度环与转向环控制 (50ms 周期) ---
 		if (CountSpeedTurn >= 50)
 		{
 			CountSpeedTurn = 0;
+
+			// 扣除零偏，得到真实的角速度
+			int16_t real_gz = gz - GyroZ_Offset;
+
+			// 死区过滤：剔除极其微小的底盘震动静差
+			if (real_gz >= -2 && real_gz <= 2)
+			{
+				real_gz = 0;
+			}
+
+			// 转化为角速度并积分 (假设满量程 ±2000°/s，灵敏度 16.4 LSB/°/s)
+			YawAngle += ((float)real_gz / 16.4f) * 0.001f;
 
 			LeftSpeed = Encoder_Get(1) / 44.0 / 0.05 / 9.27666;
 			RightSpeed = Encoder_Get(2) / 44.0 / 0.05 / 9.27666;
@@ -266,12 +328,13 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				PID_Update(&SpeedPID);
 				AvgPWM = SpeedPID.Out;
 
-				TurnPID.Actual = DifSpeed;
+				TurnPID.Target = Target_YawAngle; // 目标值：来自 main 函数视觉算出的角度
+				TurnPID.Actual = YawAngle;		  // 实际值：来自 1ms 中断陀螺仪积分的角度
 				PID_Update(&TurnPID);
-				DifPWM = TurnPID.Out;
+				DifPWM = TurnPID.Out; // 输出值：为了追平角度差，需要的电机差速 PWM
 
-				LeftPWM = AvgPWM + DifPWM / 2;
-				RightPWM = AvgPWM - DifPWM / 2;
+				LeftPWM = AvgPWM + DifPWM;
+				RightPWM = AvgPWM - DifPWM;
 
 				// PWM 限幅
 				if (LeftPWM >= 100)
