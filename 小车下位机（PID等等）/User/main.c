@@ -30,13 +30,20 @@ double LeftSpeed, RightSpeed, AvgSpeed, DifSpeed;
 // 4. PID 与 巡线控制参数
 // ==========================================
 #define COMMONSPEED 4
-#define BASE_SPEED 3.66 // 基础直道速度
-#define MIN_SPEED 1.86	// 弯道最低速度
+#define BASE_SPEED 3.86 // 基础直道速度
+#define MIN_SPEED 0.86	// 弯道最低速度
 
 float VISION_KI = 0;	  // 视觉误差积分系数 (从0慢慢调)
 float VISION_KD = 2.5;	  // 视觉误差微分系数
 float TURN_GAIN = 0.5;	  // 转向环灵敏度增益
 float SPEED_DROP_K = 5.0; // 弯道减速系数
+
+int16_t GyroZ_Offset = 0;	  // 零偏值
+float YawAngle = 0.0f;		  // 偏航角
+uint8_t Gyro_Cal_Done = 0;	  // 校准完成标志位 (0:未完成, 1:已完成)
+float Target_YawAngle = 0.0f; // 【新增】视觉给出的目标角度
+float real_gz = 0;
+float Base_Yaw = 0.0f; // 【新增】当前行驶的基准方向 (0, 90, -90 等)
 
 PID_t SpeedPID = {
 	.Kp = 4.00,
@@ -48,7 +55,18 @@ PID_t SpeedPID = {
 	.ErrorIntMin = -150,
 };
 
-PID_t TurnPID = {
+// PID_t TurnPID = {
+// 	.Kp = 6.00,
+// 	.Ki = 2.00,
+// 	.Kd = 0.00,
+// 	.OutMax = 100,
+// 	.OutMin = -100,
+// 	.ErrorIntMax = 20,
+// 	.ErrorIntMin = -20,
+// };
+
+// 用于正常巡线的视觉差速 PID (采用你第一版的参数)
+PID_t TurnPID_Vision = {
 	.Kp = 6.00,
 	.Ki = 2.00,
 	.Kd = 0.00,
@@ -57,6 +75,22 @@ PID_t TurnPID = {
 	.ErrorIntMax = 20,
 	.ErrorIntMin = -20,
 };
+
+// 用于起步锁定和直角转弯的角度 PID (采用你第二版的参数)
+PID_t TurnPID_Gyro = {
+	.Kp = 1.86,
+	.Ki = 0.00,
+	.Kd = 0.50,
+	.OutMax = 100,
+	.OutMin = -100,
+	.ErrorIntMax = 20,
+	.ErrorIntMin = -20,
+};
+
+// 新增起步控制相关的标志位
+uint8_t is_startup_flag = 0;	  // 起步阶段标志位
+uint16_t startup_timer = 0;		  // 起步计时器
+float Vision_DifSpeed_Target = 0; // 暂存视觉计算出的差速目标值
 
 // 参数显示函数
 void Show_parameter(void)
@@ -71,12 +105,12 @@ void Show_parameter(void)
 	OLED_Printf(0, 48, OLED_6X8, "%+05.2f", SpeedPID.Out);
 
 	OLED_Printf(38, 0, OLED_6X8, "Turn");
-	OLED_Printf(38, 8, OLED_6X8, "%05.2f", TurnPID.Kp);
-	OLED_Printf(38, 16, OLED_6X8, "%05.2f", TurnPID.Ki);
-	OLED_Printf(38, 24, OLED_6X8, "%05.2f", TurnPID.Kd);
-	OLED_Printf(38, 32, OLED_6X8, "%+05.2f", TurnPID.Target);
+	OLED_Printf(38, 8, OLED_6X8, "%05.2f", TurnPID_Gyro.Kp);
+	OLED_Printf(38, 16, OLED_6X8, "%05.2f", TurnPID_Gyro.Ki);
+	OLED_Printf(38, 24, OLED_6X8, "%05.2f", TurnPID_Gyro.Kd);
+	OLED_Printf(38, 32, OLED_6X8, "%+05.2f", TurnPID_Gyro.Target);
 	OLED_Printf(38, 40, OLED_6X8, "%+05.2f", DifSpeed);
-	OLED_Printf(38, 48, OLED_6X8, "%+05.2f", TurnPID.Out);
+	OLED_Printf(38, 48, OLED_6X8, "%+05.2f", TurnPID_Gyro.Out);
 	OLED_Printf(38, 56, OLED_6X8, "%+05.2f", TURN_GAIN);
 
 	OLED_Printf(74, 40, OLED_6X8, "%+05.2f", VISION_KD);
@@ -99,7 +133,9 @@ int main(void)
 			if (RunFlag == 0)
 			{
 				PID_Init(&SpeedPID);
-				PID_Init(&TurnPID);
+				PID_Init(&TurnPID_Vision); // ⚠️ 初始化视觉 PID
+				PID_Init(&TurnPID_Gyro);   // ⚠️ 初始化陀螺仪 PID
+
 				Vision_Error_Integral = 0;
 				Last_Vision_Error = 0;
 				Encoder_Get(1);
@@ -116,6 +152,15 @@ int main(void)
 
 				have_turned_flag = 0;
 				line_end_fine_flag = 0;
+
+				YawAngle = 0.0f;		// 起跑瞬间，当前角度认为是绝对 0 度
+				Target_YawAngle = 0.0f; // 目标角度也是 0 度（直走）
+				Base_Yaw = 0.0f;
+				real_gz = 0;
+
+				// 【新增】激活起步锁头模式
+				is_startup_flag = 0;
+				startup_timer = 0;
 			}
 			else
 			{
@@ -134,19 +179,19 @@ int main(void)
 			if (ConFlag == 1) // 右直角转弯
 			{
 				SpeedPID.Target = 0;
-				TurnPID.Target = 2;
+				TurnPID_Vision.Target = 2;
 			}
 			else if (ConFlag == 2) // 左直角转弯
 			{
 				SpeedPID.Target = 0;
-				TurnPID.Target = -2;
+				TurnPID_Vision.Target = -2;
 			}
 			else // 正常寻路模式
 			{
 				if (RxCmd == 2) // 真·丢线
 				{
 					SpeedPID.Target = MIN_SPEED;
-					TurnPID.Target = 0;
+					TurnPID_Vision.Target = 0;
 				}
 				else if (RxCmd == 1) // 遇到全黑
 				{
@@ -174,62 +219,20 @@ int main(void)
 					SpeedPID.Target = expected_speed;
 
 					// 计算转向环目标值
-					TurnPID.Target = (Vision_Error * TURN_GAIN) +
-									 (Vision_Error_Integral * VISION_KI) +
-									 (Vision_Derivative * VISION_KD);
+					TurnPID_Vision.Target = (Vision_Error * TURN_GAIN) +
+											(Vision_Error_Integral * VISION_KI) +
+											(Vision_Derivative * VISION_KD);
 				}
 			}
 		}
 		else
 		{
 			SpeedPID.Target = MIN_SPEED;
-			TurnPID.Target = 0;
+			TurnPID_Vision.Target = 0;
 		}
 
 		// --- OLED 屏幕显示 ---
 		Show_parameter();
-		
-		// --- 蓝牙数据打印与接收解析 ---
-		BlueSerial_Printf("[plot,%f, %f, %f, %f]", SpeedPID.Actual, SpeedPID.Target, TurnPID.Actual, TurnPID.Target);
-		BlueSerial_Printf("SpA:%f SpT:%f TuA:%f TuT:%f", SpeedPID.Actual, SpeedPID.Target, TurnPID.Actual, TurnPID.Target);
-
-		if (BlueSerial_RxFlag == 1)
-		{
-			char *Tag = strtok(BlueSerial_RxPacket, ",");
-			if (strcmp(Tag, "slider") == 0)
-			{
-				char *Name = strtok(NULL, ",");
-				char *Value = strtok(NULL, ",");
-
-				if (strcmp(Name, "SpeedKp") == 0)
-					SpeedPID.Kp = atof(Value);
-				else if (strcmp(Name, "SpeedKi") == 0)
-					SpeedPID.Ki = atof(Value);
-				else if (strcmp(Name, "TurnKp") == 0)
-					TurnPID.Kp = atof(Value);
-				else if (strcmp(Name, "TurnKi") == 0)
-					TurnPID.Ki = atof(Value);
-				else if (strcmp(Name, "TurnKd") == 0)
-					TurnPID.Kd = atof(Value);
-				else if (strcmp(Name, "VISION_KD") == 0)
-					VISION_KD = atof(Value);
-				else if (strcmp(Name, "TURN_GAIN") == 0)
-					TURN_GAIN = atof(Value);
-				else if (strcmp(Name, "SPEED_DROP_K") == 0)
-					SPEED_DROP_K = atof(Value);
-			}
-			else if (strcmp(Tag, "joystick") == 0)
-			{
-				int8_t LH = atoi(strtok(NULL, ","));
-				int8_t LV = atoi(strtok(NULL, ","));
-				int8_t RH = atoi(strtok(NULL, ","));
-				int8_t RV = atoi(strtok(NULL, ","));
-
-				SpeedPID.Target = LV / 25.0;
-				TurnPID.Target = RH / 25.0;
-			}
-			BlueSerial_RxFlag = 0;
-		}
 	}
 }
 
@@ -244,6 +247,9 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 		CountSpeedTurn++;
 		CountControl++;
 		Key_Tick();
+
+		int16_t ax, ay, az, gx, gy, gz;
+		MPU6050_GetData(&ax, &ay, &az, &gx, &gy, &gz);
 
 		if (send_item_flag == 1)
 		{
@@ -266,9 +272,22 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				PID_Update(&SpeedPID);
 				AvgPWM = SpeedPID.Out;
 
-				TurnPID.Actual = DifSpeed;
-				PID_Update(&TurnPID);
-				DifPWM = TurnPID.Out;
+				// 【核心修改】动态控制逻辑切换
+				// 如果处于起步阶段，或者正在进行直角/全黑任务 -> 使用陀螺仪角度环
+				if (is_startup_flag == 1)
+				{
+					TurnPID_Gyro.Target = Target_YawAngle + Base_Yaw; // 目标角度 (直角转弯时更新)
+					TurnPID_Gyro.Actual = YawAngle;					  // 实时角度
+					PID_Update(&TurnPID_Gyro);
+					DifPWM = -TurnPID_Gyro.Out; // 陀螺仪闭环输出
+				}
+				else
+				{
+					// TurnPID_Vision.Target = Vision_DifSpeed_Target; // 视觉算出的预期差速
+					TurnPID_Vision.Actual = DifSpeed; // 编码器实时差速
+					PID_Update(&TurnPID_Vision);
+					DifPWM = TurnPID_Vision.Out; // 视觉闭环输出
+				}
 
 				LeftPWM = AvgPWM + DifPWM / 2;
 				RightPWM = AvgPWM - DifPWM / 2;
@@ -298,6 +317,18 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 		{
 			CountControl = 0;
 
+			// 扣除零偏，得到真实的角速度
+			real_gz = gz - GyroZ_Offset;
+
+			// 死区过滤：剔除极其微小的底盘震动静差
+			if (real_gz >= -2 && real_gz <= 2)
+			{
+				real_gz = 0;
+			}
+
+			// 转化为角速度并积分 (假设满量程 ±2000°/s，灵敏度 16.4 LSB/°/s)
+			YawAngle += ((float)real_gz / 16.4f) * 0.001f;
+
 			if (Serial_GetRxFlag() == 1)
 			{
 				RxCmd = Serial_GetRxData();
@@ -307,16 +338,28 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					all_black_flag = 1;
 				else if (RxCmd == 1 && all_black_flag == 1)
 				{
+					is_startup_flag = 1;
 					SpeedPID.Target = BASE_SPEED;
-					TurnPID.Target = 0;
+					TurnPID_Gyro.Target = 0;
 				}
 				else if (RxCmd != 1 && (all_black_flag == 1))
+				{
+					is_startup_flag = 0;
 					all_black_flag = 2;
+
+					// 【关键修复1】无论以什么姿态出全黑区，都必须强制清零积分和标志位！
+					ConFlag = 0;
+					Vision_Error_Integral = 0;
+					Last_Vision_Error = 0;
+					PID_Init(&SpeedPID);
+					PID_Init(&TurnPID_Vision);
+				}
 				else if ((RxCmd == 1 || line_end_fine_flag == 1) && (all_black_flag == 2))
 				{
 					send_item_flag = 1;
+					is_startup_flag = 1;
 					PID_Init(&SpeedPID);
-					PID_Init(&TurnPID);
+					PID_Init(&TurnPID_Gyro);
 
 					if (DelayCount >= 2000) // 预留投放逻辑
 					{
@@ -336,10 +379,11 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				if (ConFlag != 0 && (RxCmd == 31 || RxCmd == 32 || RxCmd == 33))
 				{
 					ConFlag = 0;
+					is_startup_flag = 0;
 					Vision_Error_Integral = 0;
 					Last_Vision_Error = 0;
 					PID_Init(&SpeedPID);
-					PID_Init(&TurnPID);
+					PID_Init(&TurnPID_Vision);
 				}
 
 				// 2.3 捕捉进入直角转弯信号
@@ -348,21 +392,26 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					if (RxCmd == 8)
 					{
 						ConFlag = 1; // 右直角
+						is_startup_flag = 0;
 						have_turned_flag = 1;
-						PID_Init(&SpeedPID);
-						PID_Init(&TurnPID);
+						Base_Yaw = -85;
+						PID_Init(&SpeedPID); // ⚠️ 切换模式，重置陀螺仪 PID
+						PID_Init(&TurnPID_Vision);
 					}
 					else if (RxCmd == 9)
 					{
 						ConFlag = 2; // 左直角
+						is_startup_flag = 0;
 						have_turned_flag = 1;
-						PID_Init(&SpeedPID);
-						PID_Init(&TurnPID);
+						Base_Yaw = 85;
+						PID_Init(&SpeedPID); // ⚠️ 切换模式，重置陀螺仪 PID
+						PID_Init(&TurnPID_Vision);
 					}
 				}
 				else if (ConFlag == 0 && (RxCmd == 8 || RxCmd == 9 || RxCmd == 1) && have_turned_flag == 1)
 				{
 					line_end_fine_flag = 1;
+					is_startup_flag = 1;
 				}
 			}
 		}
