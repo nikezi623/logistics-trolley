@@ -3,6 +3,9 @@
 uint8_t KeyNum, RunFlag; // runflag表示运行启停
 uint16_t time_count;
 
+uint8_t avoid_count = 0;   // 连续检测到障碍物的次数
+uint8_t Obstacle_Flag = 0; // 确认为真实障碍物的标志位
+
 int main(void)
 {
     Init_All();
@@ -31,6 +34,21 @@ int main(void)
                 dist = raw_dist - 60; // 减去误差
                 if (dist < 0)
                     dist = 0;
+            }
+
+            if (dist > 0 && dist <= 300)
+            {
+                avoid_count++;
+                if (avoid_count >= 3) // 连续3次（约90ms）都看到障碍物
+                {
+                    Obstacle_Flag = 1; // 确认障碍物存在！
+                }
+            }
+            else
+            {
+                // 一旦距离变大，或者出现报错，立刻清零计数器
+                avoid_count = 0;
+                Obstacle_Flag = 0; // 解除障碍物警报
             }
             // 拿到新数据后，立刻触发下一次测距！
             MyLaserSensor_StartRanging();
@@ -65,10 +83,14 @@ int main(void)
 
         OLED_Update();
 
+        if (Obstacle_Flag == 1)
+        {
+            Serial_SendByte(99);
+        }
         // =====================================
         // 1. 严格的直角指令 (半边至少 3-5 个灯全黑才算直角)
         // =====================================
-        if (SensorStatus == 0x07 || SensorStatus == 0x0F || SensorStatus == 0x1F)
+        else if (SensorStatus == 0x07 || SensorStatus == 0x0F || SensorStatus == 0x1F)
         {
             Serial_SendByte(9); // 真正的左直角
         }

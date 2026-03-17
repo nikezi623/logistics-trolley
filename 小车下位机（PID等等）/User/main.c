@@ -11,6 +11,9 @@ uint8_t KeyNum = 0;				// 按键键值
 uint16_t time_count = 0;		// 定时器计数
 uint8_t have_turned_flag = 0;	// 已经转过直角弯的标志位
 uint8_t line_end_fine_flag = 0; // 巡线结束标志位
+uint8_t have_avoid_flag = 0;	// 避障结束标志位
+uint8_t avoid_flag = 0;			// 避障状态机
+uint16_t DelayCount_avoid = 0;	// 避障计时器
 
 // ==========================================
 // 2. 视觉传感器参数
@@ -30,7 +33,7 @@ double LeftSpeed, RightSpeed, AvgSpeed, DifSpeed;
 // 4. PID 与 巡线控制参数
 // ==========================================
 #define COMMONSPEED 4
-#define BASE_SPEED 3.86 // 基础直道速度
+#define BASE_SPEED 1.86 // 基础直道速度
 #define MIN_SPEED 0.86	// 弯道最低速度
 
 float VISION_KI = 0;	  // 视觉误差积分系数 (从0慢慢调)
@@ -54,16 +57,6 @@ PID_t SpeedPID = {
 	.ErrorIntMax = 150,
 	.ErrorIntMin = -150,
 };
-
-// PID_t TurnPID = {
-// 	.Kp = 6.00,
-// 	.Ki = 2.00,
-// 	.Kd = 0.00,
-// 	.OutMax = 100,
-// 	.OutMin = -100,
-// 	.ErrorIntMax = 20,
-// 	.ErrorIntMin = -20,
-// };
 
 // 用于正常巡线的视觉差速 PID (采用你第一版的参数)
 PID_t TurnPID_Vision = {
@@ -186,6 +179,10 @@ int main(void)
 				SpeedPID.Target = 0;
 				TurnPID_Vision.Target = -2;
 			}
+			else if (ConFlag == 4 || ConFlag == 3)
+			{
+				// 处于避障或全黑状态机，主循环挂机，把控制权完全交给定时器中断
+			}
 			else // 正常寻路模式
 			{
 				if (RxCmd == 2) // 真·丢线
@@ -225,6 +222,7 @@ int main(void)
 				}
 			}
 		}
+
 		else
 		{
 			SpeedPID.Target = MIN_SPEED;
@@ -238,7 +236,7 @@ int main(void)
 
 void TIM1_UP_IRQHandler(void) // 1ms进入一次
 {
-	static uint16_t CountSpeedTurn = 0, CountControl = 0, DelayCount = 0;
+	static uint16_t CountSpeedTurn = 0, CountControl = 0, DelayCount_send_item = 0;
 
 	if (TIM_GetITStatus(TIM1, TIM_IT_Update) == SET)
 	{
@@ -253,7 +251,11 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 
 		if (send_item_flag == 1)
 		{
-			DelayCount++;
+			DelayCount_send_item++;
+		}
+		else if (avoid_flag == 2 || avoid_flag == 3 || avoid_flag == 4 || avoid_flag == 5 || avoid_flag == 6)
+		{
+			DelayCount_avoid++;
 		}
 
 		// --- 1. 速度环与转向环控制 (50ms 周期) ---
@@ -333,86 +335,167 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 			{
 				RxCmd = Serial_GetRxData();
 
-				// 2.1 全黑任务状态机
-				if (RxCmd == 1 && all_black_flag == 0)
-					all_black_flag = 1;
-				else if (RxCmd == 1 && all_black_flag == 1)
+				// ==========================================
+				// 优先处理：是否正在进行【强制避障】？
+				// 如果在避障，只跑避障状态机，屏蔽其他所有视觉指令！
+				// ==========================================
+				if (ConFlag == 4)
 				{
-					is_startup_flag = 1;
-					SpeedPID.Target = BASE_SPEED;
-					TurnPID_Gyro.Target = 0;
-				}
-				else if (RxCmd != 1 && (all_black_flag == 1))
-				{
-					is_startup_flag = 0;
-					all_black_flag = 2;
-
-					// 【关键修复1】无论以什么姿态出全黑区，都必须强制清零积分和标志位！
-					ConFlag = 0;
-					Vision_Error_Integral = 0;
-					Last_Vision_Error = 0;
-					PID_Init(&SpeedPID);
-					PID_Init(&TurnPID_Vision);
-				}
-				else if ((RxCmd == 1 || line_end_fine_flag == 1) && (all_black_flag == 2))
-				{
-					send_item_flag = 1;
-					is_startup_flag = 1;
-					PID_Init(&SpeedPID);
-					PID_Init(&TurnPID_Gyro);
-
-					if (DelayCount >= 2000) // 预留投放逻辑
+					if (avoid_flag == 1)
 					{
-						DelayCount = 0;
-						send_item_flag = 0;
-						all_black_flag = 3;
+						PID_Init(&TurnPID_Gyro);
+						PID_Init(&SpeedPID);
+						Base_Yaw += 90; // 原地转45度
+						avoid_flag = 2;
 					}
-				}
-				else if (RxCmd == 1 && all_black_flag == 3)
-					SpeedPID.Target = MIN_SPEED;
-				else if (RxCmd != 1 && all_black_flag == 3)
-					all_black_flag = 4;
-				else if (RxCmd == 1 && all_black_flag == 4)
-					RunFlag = 0;
-
-				// 2.2 判断是否该退出直角转弯 (重新居中)
-				if (ConFlag != 0 && (RxCmd == 31 || RxCmd == 32 || RxCmd == 33))
-				{
-					ConFlag = 0;
-					is_startup_flag = 0;
-					Vision_Error_Integral = 0;
-					Last_Vision_Error = 0;
-					PID_Init(&SpeedPID);
-					PID_Init(&TurnPID_Vision);
-				}
-
-				// 2.3 捕捉进入直角转弯信号
-				if (ConFlag == 0 && have_turned_flag == 0)
-				{
-					if (RxCmd == 8)
+					else if (avoid_flag == 2 && DelayCount_avoid >= 2000)
 					{
-						ConFlag = 1; // 右直角
+						DelayCount_avoid = 0;
+						PID_Init(&SpeedPID);
+						PID_Init(&TurnPID_Gyro);
+						SpeedPID.Target = MIN_SPEED;
+						avoid_flag = 3;
+					}
+					else if (avoid_flag == 3 && DelayCount_avoid >= 2500)
+					{
+						SpeedPID.Target = 0;
+						DelayCount_avoid = 0;
+						PID_Init(&TurnPID_Gyro);
+						Base_Yaw -= 90;
+						avoid_flag = 4;
+					}
+					else if (avoid_flag == 4 && DelayCount_avoid >= 2000)
+					{
+						DelayCount_avoid = 0;
+						PID_Init(&SpeedPID);
+						PID_Init(&TurnPID_Gyro);
+						SpeedPID.Target = MIN_SPEED;
+						avoid_flag = 5;
+					}
+					else if (avoid_flag == 5 && DelayCount_avoid >= 2500)
+					{
+						SpeedPID.Target = 0;
+						DelayCount_avoid = 0;
+						PID_Init(&TurnPID_Gyro);
+						Base_Yaw -= 60;
+						avoid_flag = 6;
+					}
+					else if (avoid_flag == 6 && DelayCount_avoid >= 2000)
+					{
+						// 避障动作全部做完，切回视觉控制
+						have_avoid_flag = 2;
 						is_startup_flag = 0;
-						have_turned_flag = 1;
-						Base_Yaw = -85;
-						PID_Init(&SpeedPID); // ⚠️ 切换模式，重置陀螺仪 PID
+						DelayCount_avoid = 0;
+						PID_Init(&SpeedPID);
+						PID_Init(&TurnPID_Gyro);
+						PID_Init(&TurnPID_Vision);
+						ConFlag = 0;
+					}
+
+					// ⚠️ 重点：如果处于避障状态，后面的直角、巡线逻辑全部跳过不执行！
+					// 不写 else，直接让它往下走，但底下的代码都用 else if 包起来了，所以不会执行。
+				}
+
+				// ==========================================
+				// 没在避障，正常处理视觉指令
+				// ==========================================
+				else
+				{
+					// --- 1. 全黑任务状态机 ---
+					if (RxCmd == 1 && all_black_flag == 0)
+						all_black_flag = 1;
+					else if (RxCmd == 1 && all_black_flag == 1)
+					{
+						is_startup_flag = 1;
+						SpeedPID.Target = BASE_SPEED;
+						TurnPID_Gyro.Target = 0;
+					}
+					else if (RxCmd != 1 && (all_black_flag == 1))
+					{
+						is_startup_flag = 0;
+						all_black_flag = 2;
+						ConFlag = 0;
+						Vision_Error_Integral = 0;
+						Last_Vision_Error = 0;
+						PID_Init(&SpeedPID);
 						PID_Init(&TurnPID_Vision);
 					}
-					else if (RxCmd == 9)
+					else if ((RxCmd == 1 || line_end_fine_flag == 1) && (all_black_flag == 2))
 					{
-						ConFlag = 2; // 左直角
+						send_item_flag = 1;
+						is_startup_flag = 1;
+						PID_Init(&SpeedPID);
+						PID_Init(&TurnPID_Gyro);
+
+						if (DelayCount_send_item >= 2000)
+						{
+							DelayCount_send_item = 0;
+							send_item_flag = 0;
+							all_black_flag = 3;
+						}
+					}
+					else if (RxCmd == 1 && all_black_flag == 3)
+						SpeedPID.Target = MIN_SPEED;
+					else if (RxCmd != 1 && all_black_flag == 3)
+						all_black_flag = 4;
+					else if (RxCmd == 1 && all_black_flag == 4)
+						RunFlag = 0;
+
+					// --- 2. 判断退出直角转弯 ---
+					// 修改点：只在直角转弯时 (ConFlag == 1 或 2) 允许被居中指令打断
+					if ((ConFlag == 1 || ConFlag == 2) && (RxCmd == 31 || RxCmd == 32 || RxCmd == 33))
+					{
+						ConFlag = 0;
 						is_startup_flag = 0;
-						have_turned_flag = 1;
+						Vision_Error_Integral = 0;
+						Last_Vision_Error = 0;
+						PID_Init(&SpeedPID);
+						PID_Init(&TurnPID_Vision);
+					}
+
+					// --- 3. 捕捉进入直角转弯 ---
+					if (ConFlag == 0 && have_turned_flag == 0)
+					{
+						if (RxCmd == 8)
+						{
+							ConFlag = 1;
+							is_startup_flag = 0;
+							have_turned_flag = 1;
+							Base_Yaw = -85;
+							PID_Init(&SpeedPID);
+							PID_Init(&TurnPID_Vision);
+						}
+						else if (RxCmd == 9)
+						{
+							ConFlag = 2;
+							is_startup_flag = 0;
+							have_turned_flag = 1;
+							Base_Yaw = 85;
+							PID_Init(&SpeedPID);
+							PID_Init(&TurnPID_Vision);
+						}
+					}
+					else if (ConFlag == 0 && (RxCmd == 8 || RxCmd == 9 || RxCmd == 1) && have_turned_flag == 1)
+					{
+						line_end_fine_flag = 1;
 						Base_Yaw = 85;
-						PID_Init(&SpeedPID); // ⚠️ 切换模式，重置陀螺仪 PID
-						PID_Init(&TurnPID_Vision);
+						is_startup_flag = 1;
 					}
-				}
-				else if (ConFlag == 0 && (RxCmd == 8 || RxCmd == 9 || RxCmd == 1) && have_turned_flag == 1)
-				{
-					line_end_fine_flag = 1;
-					is_startup_flag = 1;
-				}
+
+					// --- 4. 捕捉进入避障 ---
+					if (ConFlag == 0 && have_avoid_flag == 0)
+					{
+						if (RxCmd == 99)
+						{
+							ConFlag = 4;
+							is_startup_flag = 1;
+							have_avoid_flag = 1;
+							avoid_flag = 1;
+							PID_Init(&SpeedPID);
+							PID_Init(&TurnPID_Gyro);
+						}
+					}
+				} // 结束没在避障的 else
 			}
 		}
 		time_count = TIM_GetCounter(TIM1);

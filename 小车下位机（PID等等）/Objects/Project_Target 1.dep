@@ -808,6 +808,36 @@ I (.\Library\stm32f10x_usart.h)(0x4D783BB4)
 I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
 F (.\System\Timer.h)(0x61F11D95)()
+F (.\System\Control.c)(0x69B0FEB9)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\control.o --omf_browse .\objects\control.crf --depend .\objects\control.d)
+I (.\Start\stm32f10x.h)(0x4D783CB4)
+I (.\Start\core_cm3.h)(0x4D523B58)
+I (D:\K32\ARM\ARMCC\include\stdint.h)(0x588B8344)
+I (.\Start\system_stm32f10x.h)(0x4D783CAA)
+I (.\User\stm32f10x_conf.h)(0x4D99A59E)
+I (.\Library\stm32f10x_adc.h)(0x4D783BB4)
+I (.\Library\stm32f10x_bkp.h)(0x4D783BB4)
+I (.\Library\stm32f10x_can.h)(0x4D783BB4)
+I (.\Library\stm32f10x_cec.h)(0x4D783BB4)
+I (.\Library\stm32f10x_crc.h)(0x4D783BB4)
+I (.\Library\stm32f10x_dac.h)(0x4D783BB4)
+I (.\Library\stm32f10x_dbgmcu.h)(0x4D783BB4)
+I (.\Library\stm32f10x_dma.h)(0x4D783BB4)
+I (.\Library\stm32f10x_exti.h)(0x4D783BB4)
+I (.\Library\stm32f10x_flash.h)(0x4D783BB4)
+I (.\Library\stm32f10x_fsmc.h)(0x4D783BB4)
+I (.\Library\stm32f10x_gpio.h)(0x4D783BB4)
+I (.\Library\stm32f10x_i2c.h)(0x4D783BB4)
+I (.\Library\stm32f10x_iwdg.h)(0x4D783BB4)
+I (.\Library\stm32f10x_pwr.h)(0x4D783BB4)
+I (.\Library\stm32f10x_rcc.h)(0x4D783BB4)
+I (.\Library\stm32f10x_rtc.h)(0x4D783BB4)
+I (.\Library\stm32f10x_sdio.h)(0x4D783BB4)
+I (.\Library\stm32f10x_spi.h)(0x4D783BB4)
+I (.\Library\stm32f10x_tim.h)(0x4D783BB4)
+I (.\Library\stm32f10x_usart.h)(0x4D783BB4)
+I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
+I (.\Library\misc.h)(0x4D783BB4)
+F (.\System\Control.h)(0x697DD4FC)()
 F (.\Hardware\LED.c)(0x6962507C)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\led.o --omf_browse .\objects\led.crf --depend .\objects\led.d)
 I (.\Start\stm32f10x.h)(0x4D783CB4)
 I (.\Start\core_cm3.h)(0x4D523B58)
@@ -867,18 +897,18 @@ I (.\Library\stm32f10x_tim.h)(0x4D783BB4)
 I (.\Library\stm32f10x_usart.h)(0x4D783BB4)
 I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
-I (Hardware\OLED.h)(0x6714EDC0)
+I (Hardware\OLED.h)(0x69B6284A)
 I (Hardware\OLED_Data.h)(0x6714EE44)
 I (D:\K32\ARM\ARMCC\include\string.h)(0x588B8344)
 I (D:\K32\ARM\ARMCC\include\math.h)(0x588B8344)
 I (D:\K32\ARM\ARMCC\include\stdio.h)(0x588B8344)
 I (D:\K32\ARM\ARMCC\include\stdarg.h)(0x588B8344)
-F (.\Hardware\OLED.h)(0x6714EDC0)()
+F (.\Hardware\OLED.h)(0x69B6284A)()
 F (.\Hardware\OLED_Data.c)(0x6714EE46)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\oled_data.o --omf_browse .\objects\oled_data.crf --depend .\objects\oled_data.d)
 I (Hardware\OLED_Data.h)(0x6714EE44)
 I (D:\K32\ARM\ARMCC\include\stdint.h)(0x588B8344)
 F (.\Hardware\OLED_Data.h)(0x6714EE44)()
-F (.\Hardware\Key.c)(0x69687D7E)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\key.o --omf_browse .\objects\key.crf --depend .\objects\key.d)
+F (.\Hardware\Key.c)(0x696331E1)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\key.o --omf_browse .\objects\key.crf --depend .\objects\key.d)
 I (.\Start\stm32f10x.h)(0x4D783CB4)
 I (.\Start\core_cm3.h)(0x4D523B58)
 I (D:\K32\ARM\ARMCC\include\stdint.h)(0x588B8344)
@@ -942,7 +972,7 @@ I (Hardware\MyI2C.h)(0x63984C44)
 I (Hardware\MPU6050_Reg.h)(0x63985438)
 F (.\Hardware\MPU6050.h)(0x63985B24)()
 F (.\Hardware\MPU6050_Reg.h)(0x63985438)()
-F (.\Hardware\MyI2C.c)(0x69B943DD)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\myi2c.o --omf_browse .\objects\myi2c.crf --depend .\objects\myi2c.d)
+F (.\Hardware\MyI2C.c)(0x6965F92C)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\myi2c.o --omf_browse .\objects\myi2c.crf --depend .\objects\myi2c.d)
 I (.\Start\stm32f10x.h)(0x4D783CB4)
 I (.\Start\core_cm3.h)(0x4D523B58)
 I (D:\K32\ARM\ARMCC\include\stdint.h)(0x588B8344)
@@ -1002,9 +1032,9 @@ I (.\Library\stm32f10x_tim.h)(0x4D783BB4)
 I (.\Library\stm32f10x_usart.h)(0x4D783BB4)
 I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
-I (Hardware\PWM.h)(0x699C5A77)
+I (Hardware\PWM.h)(0x69662A52)
 F (.\Hardware\Motor.h)(0x6966311F)()
-F (.\Hardware\PWM.c)(0x699C5A6B)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\pwm.o --omf_browse .\objects\pwm.crf --depend .\objects\pwm.d)
+F (.\Hardware\PWM.c)(0x69662A2D)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\pwm.o --omf_browse .\objects\pwm.crf --depend .\objects\pwm.d)
 I (.\Start\stm32f10x.h)(0x4D783CB4)
 I (.\Start\core_cm3.h)(0x4D523B58)
 I (D:\K32\ARM\ARMCC\include\stdint.h)(0x588B8344)
@@ -1033,7 +1063,7 @@ I (.\Library\stm32f10x_tim.h)(0x4D783BB4)
 I (.\Library\stm32f10x_usart.h)(0x4D783BB4)
 I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
-F (.\Hardware\PWM.h)(0x699C5A77)()
+F (.\Hardware\PWM.h)(0x69662A52)()
 F (.\Hardware\Encoder.c)(0x69663A21)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\encoder.o --omf_browse .\objects\encoder.crf --depend .\objects\encoder.d)
 I (.\Start\stm32f10x.h)(0x4D783CB4)
 I (.\Start\core_cm3.h)(0x4D523B58)
@@ -1128,8 +1158,8 @@ I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
 I (D:\K32\ARM\ARMCC\include\stdio.h)(0x588B8344)
 I (D:\K32\ARM\ARMCC\include\stdarg.h)(0x588B8344)
-F (.\Hardware\GreenLightEyes.c)(0x69686D5E)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\greenlighteyes.o --omf_browse .\objects\greenlighteyes.crf --depend .\objects\greenlighteyes.d)
-I (.\User\PHC_HeadFile.h)(0x69B93F1F)
+F (.\User\main.c)(0x69B989C6)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
+I (User\PHC_HeadFile.h)(0x697DD515)
 I (.\Start\stm32f10x.h)(0x4D783CB4)
 I (.\Start\core_cm3.h)(0x4D523B58)
 I (D:\K32\ARM\ARMCC\include\stdint.h)(0x588B8344)
@@ -1158,11 +1188,8 @@ I (.\Library\stm32f10x_tim.h)(0x4D783BB4)
 I (.\Library\stm32f10x_usart.h)(0x4D783BB4)
 I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
-I (D:\K32\ARM\ARMCC\include\math.h)(0x588B8344)
-I (D:\K32\ARM\ARMCC\include\string.h)(0x588B8344)
-I (D:\K32\ARM\ARMCC\include\stdlib.h)(0x588B8344)
 I (.\System\Delay.h)(0x6130920D)
-I (.\Hardware\OLED.h)(0x6714EDC0)
+I (.\Hardware\OLED.h)(0x69B6284A)
 I (.\Hardware\OLED_Data.h)(0x6714EE44)
 I (.\Hardware\LED.h)(0x69624F82)
 I (.\System\Timer.h)(0x61F11D95)
@@ -1173,95 +1200,12 @@ I (.\Hardware\Encoder.h)(0x696638D4)
 I (.\Hardware\Serial.h)(0x62D3EBED)
 I (D:\K32\ARM\ARMCC\include\stdio.h)(0x588B8344)
 I (.\Hardware\BlueSerial.h)(0x69664549)
-I (.\User\PID.h)(0x6967E02C)
-I (.\User\InitAll.h)(0x69679EE0)
-I (.\Hardware\GreenLightEyes.h)(0x69686E33)
-I (.\Hardware\MyLaserSensor.h)(0x69B9582A)
-I (.\Hardware\MyI2C.h)(0x63984C44)
-F (.\Hardware\GreenLightEyes.h)(0x69686E33)()
-F (.\Hardware\MyLaserSensor.c)(0x69B95AA6)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\mylasersensor.o --omf_browse .\objects\mylasersensor.crf --depend .\objects\mylasersensor.d)
-I (Hardware\MyLaserSensor.h)(0x69B9582A)
-I (.\Start\stm32f10x.h)(0x4D783CB4)
-I (.\Start\core_cm3.h)(0x4D523B58)
-I (D:\K32\ARM\ARMCC\include\stdint.h)(0x588B8344)
-I (.\Start\system_stm32f10x.h)(0x4D783CAA)
-I (.\User\stm32f10x_conf.h)(0x4D99A59E)
-I (.\Library\stm32f10x_adc.h)(0x4D783BB4)
-I (.\Library\stm32f10x_bkp.h)(0x4D783BB4)
-I (.\Library\stm32f10x_can.h)(0x4D783BB4)
-I (.\Library\stm32f10x_cec.h)(0x4D783BB4)
-I (.\Library\stm32f10x_crc.h)(0x4D783BB4)
-I (.\Library\stm32f10x_dac.h)(0x4D783BB4)
-I (.\Library\stm32f10x_dbgmcu.h)(0x4D783BB4)
-I (.\Library\stm32f10x_dma.h)(0x4D783BB4)
-I (.\Library\stm32f10x_exti.h)(0x4D783BB4)
-I (.\Library\stm32f10x_flash.h)(0x4D783BB4)
-I (.\Library\stm32f10x_fsmc.h)(0x4D783BB4)
-I (.\Library\stm32f10x_gpio.h)(0x4D783BB4)
-I (.\Library\stm32f10x_i2c.h)(0x4D783BB4)
-I (.\Library\stm32f10x_iwdg.h)(0x4D783BB4)
-I (.\Library\stm32f10x_pwr.h)(0x4D783BB4)
-I (.\Library\stm32f10x_rcc.h)(0x4D783BB4)
-I (.\Library\stm32f10x_rtc.h)(0x4D783BB4)
-I (.\Library\stm32f10x_sdio.h)(0x4D783BB4)
-I (.\Library\stm32f10x_spi.h)(0x4D783BB4)
-I (.\Library\stm32f10x_tim.h)(0x4D783BB4)
-I (.\Library\stm32f10x_usart.h)(0x4D783BB4)
-I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
-I (.\Library\misc.h)(0x4D783BB4)
-I (.\System\Delay.h)(0x6130920D)
-I (Hardware\MyI2C.h)(0x63984C44)
-F (.\Hardware\MyLaserSensor.h)(0x69B9582A)()
-F (.\User\main.c)(0x69B97393)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
-I (User\PHC_HeadFile.h)(0x69B93F1F)
-I (.\Start\stm32f10x.h)(0x4D783CB4)
-I (.\Start\core_cm3.h)(0x4D523B58)
-I (D:\K32\ARM\ARMCC\include\stdint.h)(0x588B8344)
-I (.\Start\system_stm32f10x.h)(0x4D783CAA)
-I (.\User\stm32f10x_conf.h)(0x4D99A59E)
-I (.\Library\stm32f10x_adc.h)(0x4D783BB4)
-I (.\Library\stm32f10x_bkp.h)(0x4D783BB4)
-I (.\Library\stm32f10x_can.h)(0x4D783BB4)
-I (.\Library\stm32f10x_cec.h)(0x4D783BB4)
-I (.\Library\stm32f10x_crc.h)(0x4D783BB4)
-I (.\Library\stm32f10x_dac.h)(0x4D783BB4)
-I (.\Library\stm32f10x_dbgmcu.h)(0x4D783BB4)
-I (.\Library\stm32f10x_dma.h)(0x4D783BB4)
-I (.\Library\stm32f10x_exti.h)(0x4D783BB4)
-I (.\Library\stm32f10x_flash.h)(0x4D783BB4)
-I (.\Library\stm32f10x_fsmc.h)(0x4D783BB4)
-I (.\Library\stm32f10x_gpio.h)(0x4D783BB4)
-I (.\Library\stm32f10x_i2c.h)(0x4D783BB4)
-I (.\Library\stm32f10x_iwdg.h)(0x4D783BB4)
-I (.\Library\stm32f10x_pwr.h)(0x4D783BB4)
-I (.\Library\stm32f10x_rcc.h)(0x4D783BB4)
-I (.\Library\stm32f10x_rtc.h)(0x4D783BB4)
-I (.\Library\stm32f10x_sdio.h)(0x4D783BB4)
-I (.\Library\stm32f10x_spi.h)(0x4D783BB4)
-I (.\Library\stm32f10x_tim.h)(0x4D783BB4)
-I (.\Library\stm32f10x_usart.h)(0x4D783BB4)
-I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
-I (.\Library\misc.h)(0x4D783BB4)
-I (D:\K32\ARM\ARMCC\include\math.h)(0x588B8344)
-I (D:\K32\ARM\ARMCC\include\string.h)(0x588B8344)
-I (D:\K32\ARM\ARMCC\include\stdlib.h)(0x588B8344)
-I (.\System\Delay.h)(0x6130920D)
-I (.\Hardware\OLED.h)(0x6714EDC0)
-I (.\Hardware\OLED_Data.h)(0x6714EE44)
-I (.\Hardware\LED.h)(0x69624F82)
-I (.\System\Timer.h)(0x61F11D95)
-I (.\Hardware\Key.h)(0x671CA9DD)
-I (.\Hardware\MPU6050.h)(0x63985B24)
-I (.\Hardware\Motor.h)(0x6966311F)
-I (.\Hardware\Encoder.h)(0x696638D4)
-I (.\Hardware\Serial.h)(0x62D3EBED)
-I (D:\K32\ARM\ARMCC\include\stdio.h)(0x588B8344)
-I (.\Hardware\BlueSerial.h)(0x69664549)
+I (.\System\control.h)(0x697DD4FC)
 I (User\PID.h)(0x6967E02C)
 I (User\InitAll.h)(0x69679EE0)
-I (.\Hardware\GreenLightEyes.h)(0x69686E33)
-I (.\Hardware\MyLaserSensor.h)(0x69B9582A)
-I (.\Hardware\MyI2C.h)(0x63984C44)
+I (D:\K32\ARM\ARMCC\include\math.h)(0x588B8344)
+I (D:\K32\ARM\ARMCC\include\string.h)(0x588B8344)
+I (D:\K32\ARM\ARMCC\include\stdlib.h)(0x588B8344)
 F (.\User\stm32f10x_conf.h)(0x4D99A59E)()
 F (.\User\stm32f10x_it.c)(0x4D99A59E)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\stm32f10x_it.o --omf_browse .\objects\stm32f10x_it.crf --depend .\objects\stm32f10x_it.d)
 I (User\stm32f10x_it.h)(0x4D99A59E)
@@ -1325,8 +1269,8 @@ I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
 I (User\PID.h)(0x6967E02C)
 F (.\User\PID.h)(0x6967E02C)()
-F (.\User\InitAll.c)(0x69B93F30)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\initall.o --omf_browse .\objects\initall.crf --depend .\objects\initall.d)
-I (User\PHC_HeadFile.h)(0x69B93F1F)
+F (.\User\InitAll.c)(0x697DD689)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\initall.o --omf_browse .\objects\initall.crf --depend .\objects\initall.d)
+I (User\PHC_HeadFile.h)(0x697DD515)
 I (.\Start\stm32f10x.h)(0x4D783CB4)
 I (.\Start\core_cm3.h)(0x4D523B58)
 I (D:\K32\ARM\ARMCC\include\stdint.h)(0x588B8344)
@@ -1355,11 +1299,8 @@ I (.\Library\stm32f10x_tim.h)(0x4D783BB4)
 I (.\Library\stm32f10x_usart.h)(0x4D783BB4)
 I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
-I (D:\K32\ARM\ARMCC\include\math.h)(0x588B8344)
-I (D:\K32\ARM\ARMCC\include\string.h)(0x588B8344)
-I (D:\K32\ARM\ARMCC\include\stdlib.h)(0x588B8344)
 I (.\System\Delay.h)(0x6130920D)
-I (.\Hardware\OLED.h)(0x6714EDC0)
+I (.\Hardware\OLED.h)(0x69B6284A)
 I (.\Hardware\OLED_Data.h)(0x6714EE44)
 I (.\Hardware\LED.h)(0x69624F82)
 I (.\System\Timer.h)(0x61F11D95)
@@ -1370,10 +1311,11 @@ I (.\Hardware\Encoder.h)(0x696638D4)
 I (.\Hardware\Serial.h)(0x62D3EBED)
 I (D:\K32\ARM\ARMCC\include\stdio.h)(0x588B8344)
 I (.\Hardware\BlueSerial.h)(0x69664549)
+I (.\System\control.h)(0x697DD4FC)
 I (User\PID.h)(0x6967E02C)
 I (User\InitAll.h)(0x69679EE0)
-I (.\Hardware\GreenLightEyes.h)(0x69686E33)
-I (.\Hardware\MyLaserSensor.h)(0x69B9582A)
-I (.\Hardware\MyI2C.h)(0x63984C44)
+I (D:\K32\ARM\ARMCC\include\math.h)(0x588B8344)
+I (D:\K32\ARM\ARMCC\include\string.h)(0x588B8344)
+I (D:\K32\ARM\ARMCC\include\stdlib.h)(0x588B8344)
 F (.\User\InitAll.h)(0x69679EE0)()
-F (.\User\PHC_HeadFile.h)(0x69B93F1F)()
+F (.\User\PHC_HeadFile.h)(0x697DD515)()
