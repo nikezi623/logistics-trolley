@@ -18,5 +18,6 @@
 #include "PID.h"
 #include "InitAll.h"
 #include "GreenLightEyes.h"
+#include "MyLaserSensor.h"
 
 #endif

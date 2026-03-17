@@ -6,17 +6,42 @@ uint16_t time_count;
 int main(void)
 {
     Init_All();
-    uint8_t SensorStatus; // 用于存储当前传感器状态
+
+    uint8_t SensorStatus;  // 用于存储当前传感器状态
+    int16_t dist = 0;      // 激光测距传感器数据
+    uint16_t raw_dist = 0; // 加一个变量存原始数据
 
     while (1)
     {
         // 获取一次当前的传感器状态
         SensorStatus = GLE_GetStatus();
+        raw_dist = MyLaserSensor_ReadDistance() - 60;
+
+        if (raw_dist == 8190 || raw_dist == 0xFFFF)
+        {
+            dist = -1; // 用 -1 代表读取失败或超时
+        }
+        else
+        {
+            dist = raw_dist;
+            if (dist < 0)
+            {
+                dist = 0; // 物理距离不可能小于 0，强制归零
+            }
+        }
 
         // OLED
         // --- 1. 基础数据显示 ---
         OLED_ShowBinNum(0, 0, SensorStatus, 8, OLED_8X16);
         OLED_ShowNum(0, 16, KeyNum, 1, OLED_8X16);
+        if (dist == -1)
+        {
+            OLED_Printf(0, 48, OLED_8X16, "Dis:ERROR"); // 错误时显示 ERROR
+        }
+        else
+        {
+            OLED_Printf(0, 48, OLED_8X16, "Dis:%04dmm", dist); // 去掉没必要的 + 号，显示四位数字
+        }
 
         // --- 2. 传感器状态可视化 (图形法) ---
         OLED_ClearArea(0, 32, 128, 16);
