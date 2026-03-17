@@ -800,6 +800,16 @@
               <FileType>5</FileType>
               <FilePath>.\Hardware\GreenLightEyes.h</FilePath>
             </File>
+            <File>
+              <FileName>MyLaserSensor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardware\MyLaserSensor.c</FilePath>
+            </File>
+            <File>
+              <FileName>MyLaserSensor.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Hardware\MyLaserSensor.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
