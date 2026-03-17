@@ -11,5 +11,7 @@
 // 函数声明
 void MyLaserSensor_Init(void);
 uint16_t MyLaserSensor_ReadDistance(void);
+void MyLaserSensor_StartRanging(void);
+int16_t MyLaserSensor_CheckAndRead(void);
 
 #endif

@@ -7,27 +7,33 @@ int main(void)
 {
     Init_All();
 
-    uint8_t SensorStatus;  // 用于存储当前传感器状态
-    int16_t dist = 0;      // 激光测距传感器数据
-    uint16_t raw_dist = 0; // 加一个变量存原始数据
+    uint8_t SensorStatus; // 用于存储当前传感器状态
+    int16_t dist = 0;     // 激光测距传感器数据
+    int16_t raw_dist = 0; // 加一个变量存原始数据
+
+    // 进主循环前，先触发第一次测距！
+    MyLaserSensor_StartRanging();
 
     while (1)
     {
         // 获取一次当前的传感器状态
         SensorStatus = GLE_GetStatus();
-        raw_dist = MyLaserSensor_ReadDistance() - 60;
+        raw_dist = MyLaserSensor_CheckAndRead();
 
-        if (raw_dist == 8190 || raw_dist == 0xFFFF)
+        if (raw_dist != -2) // 如果不等于 -2，说明有新数据了！
         {
-            dist = -1; // 用 -1 代表读取失败或超时
-        }
-        else
-        {
-            dist = raw_dist;
-            if (dist < 0)
+            if (raw_dist == 8190 || raw_dist == 0xFFFF)
             {
-                dist = 0; // 物理距离不可能小于 0，强制归零
+                dist = -1; // 错误码
             }
+            else
+            {
+                dist = raw_dist - 60; // 减去误差
+                if (dist < 0)
+                    dist = 0;
+            }
+            // 拿到新数据后，立刻触发下一次测距！
+            MyLaserSensor_StartRanging();
         }
 
         // OLED

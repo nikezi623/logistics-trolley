@@ -1176,11 +1176,11 @@ I (.\Hardware\BlueSerial.h)(0x69664549)
 I (.\User\PID.h)(0x6967E02C)
 I (.\User\InitAll.h)(0x69679EE0)
 I (.\Hardware\GreenLightEyes.h)(0x69686E33)
-I (.\Hardware\MyLaserSensor.h)(0x69B94073)
+I (.\Hardware\MyLaserSensor.h)(0x69B9582A)
 I (.\Hardware\MyI2C.h)(0x63984C44)
 F (.\Hardware\GreenLightEyes.h)(0x69686E33)()
-F (.\Hardware\MyLaserSensor.c)(0x69B94780)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\mylasersensor.o --omf_browse .\objects\mylasersensor.crf --depend .\objects\mylasersensor.d)
-I (Hardware\MyLaserSensor.h)(0x69B94073)
+F (.\Hardware\MyLaserSensor.c)(0x69B95AA6)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\mylasersensor.o --omf_browse .\objects\mylasersensor.crf --depend .\objects\mylasersensor.d)
+I (Hardware\MyLaserSensor.h)(0x69B9582A)
 I (.\Start\stm32f10x.h)(0x4D783CB4)
 I (.\Start\core_cm3.h)(0x4D523B58)
 I (D:\K32\ARM\ARMCC\include\stdint.h)(0x588B8344)
@@ -1211,8 +1211,8 @@ I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
 I (.\System\Delay.h)(0x6130920D)
 I (Hardware\MyI2C.h)(0x63984C44)
-F (.\Hardware\MyLaserSensor.h)(0x69B94073)()
-F (.\User\main.c)(0x69B94C5A)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
+F (.\Hardware\MyLaserSensor.h)(0x69B9582A)()
+F (.\User\main.c)(0x69B95A01)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
 I (User\PHC_HeadFile.h)(0x69B93F1F)
 I (.\Start\stm32f10x.h)(0x4D783CB4)
 I (.\Start\core_cm3.h)(0x4D523B58)
@@ -1260,7 +1260,7 @@ I (.\Hardware\BlueSerial.h)(0x69664549)
 I (User\PID.h)(0x6967E02C)
 I (User\InitAll.h)(0x69679EE0)
 I (.\Hardware\GreenLightEyes.h)(0x69686E33)
-I (.\Hardware\MyLaserSensor.h)(0x69B94073)
+I (.\Hardware\MyLaserSensor.h)(0x69B9582A)
 I (.\Hardware\MyI2C.h)(0x63984C44)
 F (.\User\stm32f10x_conf.h)(0x4D99A59E)()
 F (.\User\stm32f10x_it.c)(0x4D99A59E)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\stm32f10x_it.o --omf_browse .\objects\stm32f10x_it.crf --depend .\objects\stm32f10x_it.d)
@@ -1373,7 +1373,7 @@ I (.\Hardware\BlueSerial.h)(0x69664549)
 I (User\PID.h)(0x6967E02C)
 I (User\InitAll.h)(0x69679EE0)
 I (.\Hardware\GreenLightEyes.h)(0x69686E33)
-I (.\Hardware\MyLaserSensor.h)(0x69B94073)
+I (.\Hardware\MyLaserSensor.h)(0x69B9582A)
 I (.\Hardware\MyI2C.h)(0x63984C44)
 F (.\User\InitAll.h)(0x69679EE0)()
 F (.\User\PHC_HeadFile.h)(0x69B93F1F)()

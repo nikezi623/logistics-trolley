@@ -100,3 +100,30 @@ uint16_t MyLaserSensor_ReadDistance(void)
 
     return distance;
 }
+
+// 新增函数 1：只负责发送“开始测距”的指令，绝不等待！
+void MyLaserSensor_StartRanging(void)
+{
+    VL53L0X_WriteReg(0x00, 0x01); // 写入 0x01 开始测距
+}
+
+// 新增函数 2：检查有没有测完，测完就返回真实距离，没测完就返回一个特殊标记 (比如 -2)
+int16_t MyLaserSensor_CheckAndRead(void)
+{
+    uint8_t val;
+    val = VL53L0X_ReadReg(0x14); // 读状态寄存器
+    
+    if (val & 0x01) // 如果 bit0 为 1，说明测完了
+    {
+        uint16_t dist = VL53L0X_ReadReg16(0x1E); // 把数据读出来
+        
+        // 【修复点 2】清除内部中断标志，允许传感器进行下一次测距！
+        VL53L0X_WriteReg(0x0B, 0x01); 
+        
+        return (int16_t)dist;
+    }
+    else
+    {
+        return -2; // 没测完
+    }
+}
