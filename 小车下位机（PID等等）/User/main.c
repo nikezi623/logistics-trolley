@@ -33,20 +33,21 @@ double LeftSpeed, RightSpeed, AvgSpeed, DifSpeed;
 // 4. PID 与 巡线控制参数
 // ==========================================
 #define COMMONSPEED 4
-#define BASE_SPEED 1.86 // 基础直道速度
-#define MIN_SPEED 0.86	// 弯道最低速度
+#define BASE_SPEED 3.56 // 基础直道速度
+#define MIN_SPEED 0.00	// 弯道最低速度
 
 float VISION_KI = 0;	  // 视觉误差积分系数 (从0慢慢调)
 float VISION_KD = 2.5;	  // 视觉误差微分系数
-float TURN_GAIN = 0.5;	  // 转向环灵敏度增益
-float SPEED_DROP_K = 5.0; // 弯道减速系数
+float TURN_GAIN = 1.05;	  // 转向环灵敏度增益
+float SPEED_DROP_K = 5.5; // 弯道减速系数
 
 int16_t GyroZ_Offset = 0;	  // 零偏值
 float YawAngle = 0.0f;		  // 偏航角
 uint8_t Gyro_Cal_Done = 0;	  // 校准完成标志位 (0:未完成, 1:已完成)
 float Target_YawAngle = 0.0f; // 【新增】视觉给出的目标角度
 float real_gz = 0;
-float Base_Yaw = 0.0f; // 【新增】当前行驶的基准方向 (0, 90, -90 等)
+float Base_Yaw = 0.0f;					// 【新增】当前行驶的基准方向 (0, 90, -90 等)
+static float avoid_original_yaw = 0.0f; // 在文件开头或 main 函数上方定义一个静态变量，记录避障前的原始偏航角
 
 PID_t SpeedPID = {
 	.Kp = 4.00,
@@ -62,7 +63,7 @@ PID_t SpeedPID = {
 PID_t TurnPID_Vision = {
 	.Kp = 6.00,
 	.Ki = 2.00,
-	.Kd = 0.00,
+	.Kd = 4.00,
 	.OutMax = 100,
 	.OutMin = -100,
 	.ErrorIntMax = 20,
@@ -72,7 +73,7 @@ PID_t TurnPID_Vision = {
 // 用于起步锁定和直角转弯的角度 PID (采用你第二版的参数)
 PID_t TurnPID_Gyro = {
 	.Kp = 1.86,
-	.Ki = 0.00,
+	.Ki = 0.5,
 	.Kd = 0.50,
 	.OutMax = 100,
 	.OutMin = -100,
@@ -110,6 +111,7 @@ void Show_parameter(void)
 	OLED_Printf(74, 48, OLED_6X8, "%+05.2f", TURN_GAIN);
 	OLED_Printf(74, 56, OLED_6X8, "%+05.2f", SPEED_DROP_K);
 	OLED_Printf(76, 0, OLED_8X16, "Rxd:%d", RxCmd);
+	OLED_Printf(76, 16, OLED_8X16, "Rxd:%d", ConFlag);
 	OLED_Update();
 }
 
@@ -172,12 +174,12 @@ int main(void)
 			if (ConFlag == 1) // 右直角转弯
 			{
 				SpeedPID.Target = 0;
-				TurnPID_Vision.Target = 2;
+				TurnPID_Vision.Target = 3;
 			}
 			else if (ConFlag == 2) // 左直角转弯
 			{
 				SpeedPID.Target = 0;
-				TurnPID_Vision.Target = -2;
+				TurnPID_Vision.Target = -3;
 			}
 			else if (ConFlag == 4 || ConFlag == 3)
 			{
@@ -223,11 +225,11 @@ int main(void)
 			}
 		}
 
-		else
-		{
-			SpeedPID.Target = MIN_SPEED;
-			TurnPID_Vision.Target = 0;
-		}
+		// else
+		// {
+		// 	SpeedPID.Target = MIN_SPEED;
+		// 	TurnPID_Vision.Target = 0;
+		// }
 
 		// --- OLED 屏幕显示 ---
 		Show_parameter();
@@ -253,7 +255,8 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 		{
 			DelayCount_send_item++;
 		}
-		else if (avoid_flag == 2 || avoid_flag == 3 || avoid_flag == 4 || avoid_flag == 5 || avoid_flag == 6)
+
+		else if (avoid_flag == 2 || avoid_flag == 3 || avoid_flag == 4 || avoid_flag == 6)
 		{
 			DelayCount_avoid++;
 		}
@@ -282,6 +285,20 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					TurnPID_Gyro.Actual = YawAngle;					  // 实时角度
 					PID_Update(&TurnPID_Gyro);
 					DifPWM = -TurnPID_Gyro.Out; // 陀螺仪闭环输出
+
+					LeftPWM = AvgPWM + DifPWM / 2;
+					RightPWM = AvgPWM - DifPWM / 2;
+
+					int16_t PWMMax = 33;
+					// PWM 限幅
+					if (LeftPWM >= PWMMax)
+						LeftPWM = PWMMax;
+					else if (LeftPWM <= -PWMMax)
+						LeftPWM = -PWMMax;
+					if (RightPWM >= PWMMax)
+						RightPWM = PWMMax;
+					else if (RightPWM <= -PWMMax)
+						RightPWM = -PWMMax;
 				}
 				else
 				{
@@ -289,20 +306,20 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					TurnPID_Vision.Actual = DifSpeed; // 编码器实时差速
 					PID_Update(&TurnPID_Vision);
 					DifPWM = TurnPID_Vision.Out; // 视觉闭环输出
+
+					LeftPWM = AvgPWM + DifPWM / 2;
+					RightPWM = AvgPWM - DifPWM / 2;
+
+					// PWM 限幅
+					if (LeftPWM >= 100)
+						LeftPWM = 100;
+					else if (LeftPWM <= -100)
+						LeftPWM = -100;
+					if (RightPWM >= 100)
+						RightPWM = 100;
+					else if (RightPWM <= -100)
+						RightPWM = -100;
 				}
-
-				LeftPWM = AvgPWM + DifPWM / 2;
-				RightPWM = AvgPWM - DifPWM / 2;
-
-				// PWM 限幅
-				if (LeftPWM >= 100)
-					LeftPWM = 100;
-				else if (LeftPWM <= -100)
-					LeftPWM = -100;
-				if (RightPWM >= 100)
-					RightPWM = 100;
-				else if (RightPWM <= -100)
-					RightPWM = -100;
 
 				Motor_SetPWM(1, LeftPWM);
 				Motor_SetPWM(2, RightPWM);
@@ -339,165 +356,173 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				// 优先处理：是否正在进行【强制避障】？
 				// 如果在避障，只跑避障状态机，屏蔽其他所有视觉指令！
 				// ==========================================
-				if (ConFlag == 4)
-				{
-					if (avoid_flag == 1)
-					{
-						PID_Init(&TurnPID_Gyro);
-						PID_Init(&SpeedPID);
-						Base_Yaw += 90; // 原地转45度
-						avoid_flag = 2;
-					}
-					else if (avoid_flag == 2 && DelayCount_avoid >= 2000)
-					{
-						DelayCount_avoid = 0;
-						PID_Init(&SpeedPID);
-						PID_Init(&TurnPID_Gyro);
-						SpeedPID.Target = MIN_SPEED;
-						avoid_flag = 3;
-					}
-					else if (avoid_flag == 3 && DelayCount_avoid >= 2500)
-					{
-						SpeedPID.Target = 0;
-						DelayCount_avoid = 0;
-						PID_Init(&TurnPID_Gyro);
-						Base_Yaw -= 90;
-						avoid_flag = 4;
-					}
-					else if (avoid_flag == 4 && DelayCount_avoid >= 2000)
-					{
-						DelayCount_avoid = 0;
-						PID_Init(&SpeedPID);
-						PID_Init(&TurnPID_Gyro);
-						SpeedPID.Target = MIN_SPEED;
-						avoid_flag = 5;
-					}
-					else if (avoid_flag == 5 && DelayCount_avoid >= 2500)
-					{
-						SpeedPID.Target = 0;
-						DelayCount_avoid = 0;
-						PID_Init(&TurnPID_Gyro);
-						Base_Yaw -= 60;
-						avoid_flag = 6;
-					}
-					else if (avoid_flag == 6 && DelayCount_avoid >= 2000)
-					{
-						// 避障动作全部做完，切回视觉控制
-						have_avoid_flag = 2;
-						is_startup_flag = 0;
-						DelayCount_avoid = 0;
-						PID_Init(&SpeedPID);
-						PID_Init(&TurnPID_Gyro);
-						PID_Init(&TurnPID_Vision);
-						ConFlag = 0;
-					}
+			}
 
-					// ⚠️ 重点：如果处于避障状态，后面的直角、巡线逻辑全部跳过不执行！
-					// 不写 else，直接让它往下走，但底下的代码都用 else if 包起来了，所以不会执行。
+			if (ConFlag == 4)
+			{
+				if (avoid_flag == 1)
+				{
+					PID_Init(&TurnPID_Gyro);
+					PID_Init(&SpeedPID);
+					SpeedPID.Target = 0; // 先原地转向，不往前跑
+
+					// 记录避障那一刻的绝对航向角，作为后续回归的基准！
+					avoid_original_yaw = Base_Yaw;
+
+					// 左转（或右转）45度避开障碍
+					Base_Yaw = avoid_original_yaw + 45.0f;
+					avoid_flag = 2;
+					DelayCount_avoid = 0;
+				}
+				else if (avoid_flag == 2 && DelayCount_avoid >= 850) // 1秒足够原地转45度了
+				{
+					DelayCount_avoid = 0;
+					SpeedPID.Target = 0.86; // 慢速直线绕开圆柱
+					avoid_flag = 3;
+				}
+				else if (avoid_flag == 3 && DelayCount_avoid >= 3386) // 斜向直行的时间（根据实际距离调）
+				{
+					DelayCount_avoid = 0;
+					SpeedPID.Target = 0; // 再次停车准备转向
+					// 车头指向赛道：+45度减去90度 = -45度
+					Base_Yaw = avoid_original_yaw - 40.0f;
+					avoid_flag = 4;
+				}
+				else if (avoid_flag == 4 && DelayCount_avoid >= 850) // 等待车头转好
+				{
+					DelayCount_avoid = 0;
+					SpeedPID.Target = 0.86; // 慢速往回开，主动去“撞”黑线
+					avoid_flag = 5;
+				}
+				// ⚠️ 核心修改：斜角效应解法
+				// 不再苛求 RxCmd == 83/93，只要脱离了丢线状态（RxCmd != 2），就说明压到线了！
+				else if (avoid_flag == 5 && RxCmd != 2)
+				{
+					DelayCount_avoid = 0;
+					SpeedPID.Target = 0.6; // 压线的瞬间，立刻刹车！
+
+					// 不要急着把控制权给视觉！
+					// 用陀螺仪把车头掰回避障前的方向（完美平行于黑线）
+					Base_Yaw = avoid_original_yaw - 25;
+					avoid_flag = 6;
+				}
+				else if (avoid_flag == 6 && DelayCount_avoid >= 1000) // 给800ms让车头在黑线上原地转正
+				{
+					// 此时车身已经和黑线平行，并且就在黑线上，完美交接！
+					have_avoid_flag = 2;
+					is_startup_flag = 0; // 退出陀螺仪锁头
+					DelayCount_avoid = 0;
+
+					PID_Init(&SpeedPID);
+					PID_Init(&TurnPID_Vision); // 视觉PID接手时，误差已经很小了
+					ConFlag = 0;			   // 恢复正常巡线状态
+				}
+			}
+
+			// ⚠️ 重点：如果处于避障状态，后面的直角、巡线逻辑全部跳过不执行！
+			// 不写 else，直接让它往下走，但底下的代码都用 else if 包起来了，所以不会执行。
+
+			// ==========================================
+			// 没在避障，正常处理视觉指令
+			// ==========================================
+			else
+			{
+				// --- 1. 全黑任务状态机 ---
+				if (RxCmd == 1 && all_black_flag == 0)
+					all_black_flag = 1;
+				else if (RxCmd == 1 && all_black_flag == 1)
+				{
+					is_startup_flag = 1;
+					SpeedPID.Target = BASE_SPEED;
+					TurnPID_Gyro.Target = 0;
+				}
+				else if (RxCmd != 1 && (all_black_flag == 1))
+				{
+					is_startup_flag = 0;
+					all_black_flag = 2;
+					ConFlag = 0;
+					Vision_Error_Integral = 0;
+					Last_Vision_Error = 0;
+					PID_Init(&SpeedPID);
+					PID_Init(&TurnPID_Vision);
+				}
+				else if ((RxCmd == 1 || line_end_fine_flag == 1) && (all_black_flag == 2))
+				{
+					send_item_flag = 1;
+					is_startup_flag = 1;
+					PID_Init(&SpeedPID);
+					PID_Init(&TurnPID_Gyro);
+
+					if (DelayCount_send_item >= 2000)
+					{
+						DelayCount_send_item = 0;
+						send_item_flag = 0;
+						all_black_flag = 3;
+						SpeedPID.Target = 3.86;
+						Base_Yaw = 83;
+					}
+				}
+				else if (RxCmd == 2 && all_black_flag == 3)
+					all_black_flag = 4;
+				else if (RxCmd == 1 && all_black_flag == 4)
+					RunFlag = 0;
+
+				// --- 2. 判断退出直角转弯 ---
+				// 修改点：只在直角转弯时 (ConFlag == 1 或 2) 允许被居中指令打断
+				if ((ConFlag == 1 || ConFlag == 2) && (RxCmd == 31 || RxCmd == 32 || RxCmd == 33))
+				{
+					ConFlag = 0;
+					is_startup_flag = 0;
+					Vision_Error_Integral = 0;
+					Last_Vision_Error = 0;
+					PID_Init(&SpeedPID);
+					PID_Init(&TurnPID_Vision);
 				}
 
-				// ==========================================
-				// 没在避障，正常处理视觉指令
-				// ==========================================
-				else
+				// --- 3. 捕捉进入直角转弯 ---
+				if (ConFlag == 0 && have_turned_flag == 0)
 				{
-					// --- 1. 全黑任务状态机 ---
-					if (RxCmd == 1 && all_black_flag == 0)
-						all_black_flag = 1;
-					else if (RxCmd == 1 && all_black_flag == 1)
+					if (RxCmd == 81 || RxCmd == 82 || RxCmd == 83)
 					{
-						is_startup_flag = 1;
-						SpeedPID.Target = BASE_SPEED;
-						TurnPID_Gyro.Target = 0;
-					}
-					else if (RxCmd != 1 && (all_black_flag == 1))
-					{
+						ConFlag = 1;
 						is_startup_flag = 0;
-						all_black_flag = 2;
-						ConFlag = 0;
-						Vision_Error_Integral = 0;
-						Last_Vision_Error = 0;
+						have_turned_flag = 1;
+						Base_Yaw = -8;
 						PID_Init(&SpeedPID);
 						PID_Init(&TurnPID_Vision);
 					}
-					else if ((RxCmd == 1 || line_end_fine_flag == 1) && (all_black_flag == 2))
+					else if (RxCmd == 91 || RxCmd == 92 || RxCmd == 93)
 					{
-						send_item_flag = 1;
+						ConFlag = 2;
+						is_startup_flag = 0;
+						have_turned_flag = 1;
+						Base_Yaw = 83;
+						PID_Init(&SpeedPID);
+						PID_Init(&TurnPID_Vision);
+					}
+				}
+				else if (ConFlag == 0 && (RxCmd == 1 || RxCmd == 81 || RxCmd == 91) && have_turned_flag == 1)
+				{
+					line_end_fine_flag = 1;
+					Base_Yaw = 83;
+					is_startup_flag = 1;
+				}
+
+				// --- 4. 捕捉进入避障 ---
+				if (ConFlag == 0 && have_avoid_flag == 0)
+				{
+					if (RxCmd == 99)
+					{
+						ConFlag = 4;
 						is_startup_flag = 1;
+						have_avoid_flag = 1;
+						avoid_flag = 1;
 						PID_Init(&SpeedPID);
 						PID_Init(&TurnPID_Gyro);
-
-						if (DelayCount_send_item >= 2000)
-						{
-							DelayCount_send_item = 0;
-							send_item_flag = 0;
-							all_black_flag = 3;
-						}
 					}
-					else if (RxCmd == 1 && all_black_flag == 3)
-						SpeedPID.Target = MIN_SPEED;
-					else if (RxCmd != 1 && all_black_flag == 3)
-						all_black_flag = 4;
-					else if (RxCmd == 1 && all_black_flag == 4)
-						RunFlag = 0;
-
-					// --- 2. 判断退出直角转弯 ---
-					// 修改点：只在直角转弯时 (ConFlag == 1 或 2) 允许被居中指令打断
-					if ((ConFlag == 1 || ConFlag == 2) && (RxCmd == 31 || RxCmd == 32 || RxCmd == 33))
-					{
-						ConFlag = 0;
-						is_startup_flag = 0;
-						Vision_Error_Integral = 0;
-						Last_Vision_Error = 0;
-						PID_Init(&SpeedPID);
-						PID_Init(&TurnPID_Vision);
-					}
-
-					// --- 3. 捕捉进入直角转弯 ---
-					if (ConFlag == 0 && have_turned_flag == 0)
-					{
-						if (RxCmd == 8)
-						{
-							ConFlag = 1;
-							is_startup_flag = 0;
-							have_turned_flag = 1;
-							Base_Yaw = -85;
-							PID_Init(&SpeedPID);
-							PID_Init(&TurnPID_Vision);
-						}
-						else if (RxCmd == 9)
-						{
-							ConFlag = 2;
-							is_startup_flag = 0;
-							have_turned_flag = 1;
-							Base_Yaw = 85;
-							PID_Init(&SpeedPID);
-							PID_Init(&TurnPID_Vision);
-						}
-					}
-					else if (ConFlag == 0 && (RxCmd == 8 || RxCmd == 9 || RxCmd == 1) && have_turned_flag == 1)
-					{
-						line_end_fine_flag = 1;
-						Base_Yaw = 85;
-						is_startup_flag = 1;
-					}
-
-					// --- 4. 捕捉进入避障 ---
-					if (ConFlag == 0 && have_avoid_flag == 0)
-					{
-						if (RxCmd == 99)
-						{
-							ConFlag = 4;
-							is_startup_flag = 1;
-							have_avoid_flag = 1;
-							avoid_flag = 1;
-							PID_Init(&SpeedPID);
-							PID_Init(&TurnPID_Gyro);
-						}
-					}
-				} // 结束没在避障的 else
-			}
+				}
+			} // 结束没在避障的 else
 		}
-		time_count = TIM_GetCounter(TIM1);
 	}
+	time_count = TIM_GetCounter(TIM1);
 }
