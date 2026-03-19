@@ -1,41 +1,69 @@
 #include "PHC_HeadFile.h"
 
+extern void VL53L0X_Init(void);
+extern int16_t VL53L0X_GetDistance_NonBlocking(void);
+
 uint8_t KeyNum, RunFlag; // runflag表示运行启停
 uint16_t time_count;
+
+uint8_t avoid_count = 0;   // 连续检测到障碍物的次数
+uint8_t Obstacle_Flag = 0; // 确认为真实障碍物的标志位
 
 int main(void)
 {
     Init_All();
+
+    // 调用全新的 API 初始化 (这会执行校准逻辑)
+    VL53L0X_Init();
 
     uint8_t SensorStatus; // 用于存储当前传感器状态
     int16_t dist = 0;     // 激光测距传感器数据
     int16_t raw_dist = 0; // 加一个变量存原始数据
 
     // 进主循环前，先触发第一次测距！
-    MyLaserSensor_StartRanging();
+    //    MyLaserSensor_StartRanging();
 
     while (1)
     {
         // 获取一次当前的传感器状态
         SensorStatus = GLE_GetStatus();
-        raw_dist = MyLaserSensor_CheckAndRead();
+        raw_dist = VL53L0X_GetDistance_NonBlocking();
 
-        if (raw_dist != -2) // 如果不等于 -2，说明有新数据了！
+        // 【核心修复】加入“漏桶容错”算法，防止圆柱体边缘散射导致误清零
+        if (raw_dist != -2)
         {
-            if (raw_dist == 8190 || raw_dist == 0xFFFF)
+            if (raw_dist > 0 && raw_dist <= 300)
             {
-                dist = -1; // 错误码
+                dist = raw_dist;
+                avoid_count += 2; // 看到障碍物，快速增加置信度
+                if (avoid_count > 6)
+                    avoid_count = 6; // 设定一个上限
             }
             else
             {
-                dist = raw_dist - 60; // 减去误差
-                if (dist < 0)
-                    dist = 0;
+                if (raw_dist > 0)
+                    dist = raw_dist;
+                else if (raw_dist == -1)
+                    dist = -1;
+
+                if (avoid_count > 0)
+                    avoid_count--; // 没看到障碍物或报错，缓慢扣分（容错）
             }
-            // 拿到新数据后，立刻触发下一次测距！
-            MyLaserSensor_StartRanging();
+
+            // 分数达到 4 分（相当于看到两次），才确认有障碍物
+            if (avoid_count >= 2)
+            {
+                Obstacle_Flag = 1;
+            }
+            // 分数彻底扣完，才解除障碍物警报
+            else if (avoid_count == 0)
+            {
+                Obstacle_Flag = 0;
+            }
         }
 
+        // 如果 raw_dist == -2，程序会直接跳过上面的 if，
+        // 完美保留上一次的 dist 值，屏幕就不会闪烁了！
         // OLED
         // --- 1. 基础数据显示 ---
         OLED_ShowBinNum(0, 0, SensorStatus, 8, OLED_8X16);
@@ -65,16 +93,36 @@ int main(void)
 
         OLED_Update();
 
+        if (Obstacle_Flag == 1)
+        {
+            Serial_SendByte(99);
+        }
         // =====================================
         // 1. 严格的直角指令 (半边至少 3-5 个灯全黑才算直角)
         // =====================================
-        if (SensorStatus == 0x07 || SensorStatus == 0x0F || SensorStatus == 0x1F)
+        else if (SensorStatus == 0x07)
         {
-            Serial_SendByte(9); // 真正的左直角
+            Serial_SendByte(91); // 真正的左直角
         }
-        else if (SensorStatus == 0xE0 || SensorStatus == 0xF0 || SensorStatus == 0xF8)
+        else if (SensorStatus == 0x0F)
         {
-            Serial_SendByte(8); // 真正的右直角
+            Serial_SendByte(92); // 真正的左直角
+        }
+        else if (SensorStatus == 0x1F)
+        {
+            Serial_SendByte(93); // 真正的左直角
+        }
+        else if (SensorStatus == 0xE0)
+        {
+            Serial_SendByte(81); // 真正的右直角
+        }
+        else if (SensorStatus == 0xF0)
+        {
+            Serial_SendByte(82); // 真正的右直角
+        }
+        else if (SensorStatus == 0xF8)
+        {
+            Serial_SendByte(83); // 真正的右直角
         }
 
         // =====================================
