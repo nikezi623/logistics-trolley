@@ -3,17 +3,19 @@
 // ==========================================
 // 1. 系统状态与标志位
 // ==========================================
-uint8_t RunFlag = 0;			// 运行启停标志位 (0:停止, 1:运行)
-uint8_t ConFlag = 0;			// 转向状态 (0:正常巡线, 1:右直角, 2:左直角, 3:全黑)
-uint8_t all_black_flag = 0;		// 全黑任务状态机阶段
-uint8_t send_item_flag = 0;		// 投放货物触发标志
-uint8_t KeyNum = 0;				// 按键键值
-uint16_t time_count = 0;		// 定时器计数
-uint8_t have_turned_flag = 0;	// 已经转过直角弯的标志位
-uint8_t line_end_fine_flag = 0; // 巡线结束标志位
-uint8_t have_avoid_flag = 0;	// 避障结束标志位
-uint8_t avoid_flag = 0;			// 避障状态机
-uint16_t DelayCount_avoid = 0;	// 避障计时器
+uint8_t RunFlag = 0;					  // 运行启停标志位 (0:停止, 1:运行)
+uint8_t ConFlag = 0;					  // 转向状态 (0:正常巡线, 1:右直角, 2:左直角, 3:全黑)
+uint8_t all_black_flag = 0;				  // 全黑任务状态机阶段
+uint8_t send_item_flag = 0;				  // 投放货物触发标志
+uint8_t KeyNum = 0;						  // 按键键值
+uint16_t time_count = 0;				  // 定时器计数
+uint8_t have_turned_flag = 0;			  // 已经转过直角弯的标志位
+uint8_t line_end_fine_flag = 0;			  // 巡线结束标志位
+uint8_t have_avoid_flag = 0;			  // 避障结束标志位
+uint8_t avoid_flag = 0;					  // 避障状态机
+uint16_t DelayCount_avoid = 0;			  // 避障计时器
+uint8_t RightTurn_flag = 0;				  // 直角弯状态机
+uint16_t DelayCount_right_angle_turn = 0; // 直角弯计时器
 
 // ==========================================
 // 2. 视觉传感器参数
@@ -171,16 +173,67 @@ int main(void)
 		if (line_end_fine_flag == 0)
 		{
 			// --- 核心运动控制目标计算 ---
-			if (ConFlag == 1) // 右直角转弯
+			if (ConFlag == 1 && RightTurn_flag == 11) // 右直角转弯
+			{
+				SpeedPID.Target = 0.86;
+				RightTurn_flag = 2;
+				// TurnPID_Vision.Target = 3;
+			}
+			else if (RightTurn_flag == 2 && DelayCount_right_angle_turn >= 1000)
 			{
 				SpeedPID.Target = 0;
-				TurnPID_Vision.Target = 3;
+				RightTurn_flag = 3;
+				DelayCount_right_angle_turn = 0;
 			}
-			else if (ConFlag == 2) // 左直角转弯
+			else if (RightTurn_flag == 3 && DelayCount_right_angle_turn >= 500)
+			{
+				PID_Init(&SpeedPID);
+				PID_Init(&TurnPID_Vision);
+				PID_Init(&TurnPID_Gyro);
+				is_startup_flag = 1;
+				DelayCount_right_angle_turn = 0;
+				RightTurn_flag = 4;
+			}
+			else if (RightTurn_flag == 4 && DelayCount_right_angle_turn >= 1000)
+			{
+				PID_Init(&SpeedPID);
+				PID_Init(&TurnPID_Vision);
+				PID_Init(&TurnPID_Gyro);
+				is_startup_flag = 0;
+				DelayCount_right_angle_turn = 0;
+				RightTurn_flag = 5;
+			}
+
+			if (ConFlag == 2 && RightTurn_flag == 12) // 左直角转弯
 			{
 				SpeedPID.Target = 0;
-				TurnPID_Vision.Target = -3;
+				// TurnPID_Vision.Target = -3;
 			}
+			else if (RightTurn_flag == 2 && DelayCount_right_angle_turn >= 1000)
+			{
+				SpeedPID.Target = 0;
+				RightTurn_flag = 3;
+				DelayCount_right_angle_turn = 0;
+			}
+			else if (RightTurn_flag == 3 && DelayCount_right_angle_turn >= 500)
+			{
+				PID_Init(&SpeedPID);
+				PID_Init(&TurnPID_Vision);
+				PID_Init(&TurnPID_Gyro);
+				is_startup_flag = 1;
+				DelayCount_right_angle_turn = 0;
+				RightTurn_flag = 4;
+			}
+			else if (RightTurn_flag == 4 && DelayCount_right_angle_turn >= 1000)
+			{
+				PID_Init(&SpeedPID);
+				PID_Init(&TurnPID_Vision);
+				PID_Init(&TurnPID_Gyro);
+				is_startup_flag = 0;
+				DelayCount_right_angle_turn = 0;
+				RightTurn_flag = 5;
+			}
+
 			else if (ConFlag == 4 || ConFlag == 3)
 			{
 				// 处于避障或全黑状态机，主循环挂机，把控制权完全交给定时器中断
@@ -259,6 +312,11 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 		else if (avoid_flag == 2 || avoid_flag == 3 || avoid_flag == 4 || avoid_flag == 6)
 		{
 			DelayCount_avoid++;
+		}
+
+		else if (RightTurn_flag == 2 || RightTurn_flag == 3 || RightTurn_flag == 4)
+		{
+			DelayCount_right_angle_turn++;
 		}
 
 		// --- 1. 速度环与转向环控制 (50ms 周期) ---
@@ -485,16 +543,18 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					if (RxCmd == 81 || RxCmd == 82 || RxCmd == 83)
 					{
 						ConFlag = 1;
-						is_startup_flag = 0;
+						// is_startup_flag = 0;
+						RightTurn_flag = 11;
 						have_turned_flag = 1;
-						Base_Yaw = -8;
+						Base_Yaw = -83;
 						PID_Init(&SpeedPID);
 						PID_Init(&TurnPID_Vision);
 					}
 					else if (RxCmd == 91 || RxCmd == 92 || RxCmd == 93)
 					{
 						ConFlag = 2;
-						is_startup_flag = 0;
+						// is_startup_flag = 0;
+						RightTurn_flag = 12;
 						have_turned_flag = 1;
 						Base_Yaw = 83;
 						PID_Init(&SpeedPID);
