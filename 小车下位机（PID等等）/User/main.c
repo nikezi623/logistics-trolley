@@ -487,7 +487,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 						ConFlag = 1;
 						is_startup_flag = 0;
 						have_turned_flag = 1;
-						Base_Yaw = -8;
+						Base_Yaw = -83;
 						PID_Init(&SpeedPID);
 						PID_Init(&TurnPID_Vision);
 					}
