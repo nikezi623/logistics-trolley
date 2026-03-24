@@ -111,13 +111,15 @@ void Show_parameter(void)
 	OLED_Printf(74, 48, OLED_6X8, "%+05.2f", TURN_GAIN);
 	OLED_Printf(74, 56, OLED_6X8, "%+05.2f", SPEED_DROP_K);
 	OLED_Printf(76, 0, OLED_8X16, "Rxd:%d", RxCmd);
-	OLED_Printf(76, 16, OLED_8X16, "Rxd:%d", ConFlag);
+	OLED_Printf(76, 16, OLED_8X16, "%d", send_item_flag);
 	OLED_Update();
 }
 
 int main(void)
 {
 	Init_All();
+	Trigger_Lower_Init();
+	// Trigger_Set_Low(GPIOA, GPIO_Pin_15);
 	while (1)
 	{
 		KeyNum = Key_GetNum();
@@ -351,11 +353,6 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 			if (Serial_GetRxFlag() == 1)
 			{
 				RxCmd = Serial_GetRxData();
-
-				// ==========================================
-				// 优先处理：是否正在进行【强制避障】？
-				// 如果在避障，只跑避障状态机，屏蔽其他所有视觉指令！
-				// ==========================================
 			}
 
 			if (ConFlag == 4)
@@ -450,8 +447,18 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				{
 					send_item_flag = 1;
 					is_startup_flag = 1;
+					Base_Yaw = 83;
 					PID_Init(&SpeedPID);
 					PID_Init(&TurnPID_Gyro);
+					Serial_SendByte(86);
+
+					if (Trigger_Read_Pin(GPIOA, GPIO_Pin_15) == 1)
+					{
+						send_item_flag = 0;
+						all_black_flag = 3;
+						SpeedPID.Target = 3.86;
+						Base_Yaw = 83;
+					}
 
 					if (DelayCount_send_item >= 2000)
 					{

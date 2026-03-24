@@ -9,12 +9,16 @@ uint16_t time_count;
 uint8_t avoid_count = 0;   // 连续检测到障碍物的次数
 uint8_t Obstacle_Flag = 0; // 确认为真实障碍物的标志位
 
+uint8_t RxCmd;
+
 int main(void)
 {
     Init_All();
 
     // 调用全新的 API 初始化 (这会执行校准逻辑)
     VL53L0X_Init();
+    Trigger_Middle_Init();
+    // Trigger_Set_Low(GPIOA, GPIO_Pin_12);
 
     uint8_t SensorStatus; // 用于存储当前传感器状态
     int16_t dist = 0;     // 激光测距传感器数据
@@ -212,28 +216,26 @@ int main(void)
 
 void TIM1_UP_IRQHandler(void) // 1ms进入一次
 {
-    static uint16_t LedCount = 0;
 
     if (TIM_GetITStatus(TIM1, TIM_IT_Update) == SET)
     {
         // 清除中断标志位
         TIM_ClearITPendingBit(TIM1, TIM_IT_Update);
 
-        // 定时器自增区
-        LedCount++;
-
-        // 按键
-        Key_Tick();
-
-        // Led
-        if (LedCount == 1000)
+        if (Serial_GetRxFlag() == 1)
         {
-            LedCount = 0;
-            LED_Turn();
+            RxCmd = Serial_GetRxData();
         }
-    }
 
-    time_count = TIM_GetCounter(TIM1);
+        if (RxCmd == 86)
+        {
+            Trigger_Set_High(GPIOA, GPIO_Pin_12);
+        }
+        // else
+        // {
+        //     Trigger_Set_Low(GPIOA, GPIO_Pin_12);
+        // }
+    }
 }
 
 /*

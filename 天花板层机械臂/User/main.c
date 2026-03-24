@@ -1,10 +1,14 @@
 #include "PHC_HeadFile.h"
 
+uint8_t flag;
+
 int main(void)
 {
     uint16_t pulse; // 用于记录当前脉宽数值 (500~2500)
 
     Init_All();
+
+    Trigger_Top_Init();
 
     /* 2. 上电复位：让四个舵机先缓慢回到中位 (90度 -> 对应 1500us) */
     Servo_Control(1, 1500);
@@ -13,45 +17,59 @@ int main(void)
     Servo_Control(4, 1500);
     Delay_ms(1000); // 等待舵机走到位
 
+    // Trigger_Set_Low(GPIOA, GPIO_Pin_12);
     while (1)
     {
-        /* 测试动作 1：所有舵机平滑转到 0 度 (对应 500us) */
-        for (pulse = 1500; pulse >= 500; pulse -= 10)
+        if (Trigger_Read_Pin(GPIOA, GPIO_Pin_12) == 1 && flag == 0)
         {
-            Servo_Control(1, pulse);
-            Servo_Control(2, pulse);
-            Servo_Control(3, pulse);
-            Servo_Control(4, pulse);
-            Delay_ms(10); // 每次改变角度停顿 10ms，形成平滑动画
-        }
+            /* 测试动作 1：所有舵机平滑转到 0 度 (对应 500us) */
+            for (pulse = 1500; pulse >= 500; pulse -= 10)
+            {
+                Servo_Control(1, pulse);
+                Servo_Control(2, pulse);
+                Servo_Control(3, pulse);
+                Servo_Control(4, pulse);
+                Delay_ms(10); // 每次改变角度停顿 10ms，形成平滑动画
+            }
 
-        Delay_ms(500); // 在 0 度位置停留 0.5 秒
+            Delay_ms(500); // 在 0 度位置停留 0.5 秒
 
-        /* 测试动作 2：所有舵机平滑转到 180 度 (对应 2500us) */
-        for (pulse = 500; pulse <= 2500; pulse += 10)
-        {
-            Servo_Control(1, pulse);
-            Servo_Control(2, pulse);
-            Servo_Control(3, pulse);
-            Servo_Control(4, pulse);
-            Delay_ms(10);
-        }
+            /* 测试动作 2：所有舵机平滑转到 180 度 (对应 2500us) */
+            for (pulse = 500; pulse <= 2500; pulse += 10)
+            {
+                Servo_Control(1, pulse);
+                Servo_Control(2, pulse);
+                Servo_Control(3, pulse);
+                Servo_Control(4, pulse);
+                Delay_ms(10);
+            }
 
-        Delay_ms(500); // 在 180 度位置停留 0.5 秒
+            Delay_ms(500); // 在 180 度位置停留 0.5 秒
 
-        /* 测试动作 3：回到中位，准备下一次循环 */
-        for (pulse = 2500; pulse >= 1500; pulse -= 10)
-        {
-            Servo_Control(1, pulse);
-            Servo_Control(2, pulse);
-            Servo_Control(3, pulse);
-            Servo_Control(4, pulse);
-            Delay_ms(10);
+            /* 测试动作 3：回到中位，准备下一次循环 */
+            for (pulse = 2500; pulse >= 1500; pulse -= 10)
+            {
+                Servo_Control(1, pulse);
+                Servo_Control(2, pulse);
+                Servo_Control(3, pulse);
+                Servo_Control(4, pulse);
+                Delay_ms(10);
+            }
+
+            flag++;
+
+            // 抓取结束，通知下层
+            Trigger_Set_High(GPIOA, GPIO_Pin_15);
         }
     }
 }
 void TIM1_UP_IRQHandler(void) // 1ms进入一次
 {
+    // if (flag == 0)
+    // {
+    //     Trigger_Set_Low(GPIOA, GPIO_Pin_15);
+    // }
+
     TIM_ClearITPendingBit(TIM1, TIM_IT_Update);
 }
 

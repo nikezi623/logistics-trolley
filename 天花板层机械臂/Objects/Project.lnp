@@ -47,6 +47,7 @@
 ".\objects\mylasersensor.o"
 ".\objects\vl53l0x_platform.o"
 ".\objects\servo.o"
+".\objects\gpio_trigger.o"
 ".\objects\main.o"
 ".\objects\stm32f10x_it.o"
 ".\objects\pid.o"

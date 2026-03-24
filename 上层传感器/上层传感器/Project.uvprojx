@@ -890,6 +890,16 @@
               <FileType>5</FileType>
               <FilePath>.\Hardware\vl53l0x_platform.h</FilePath>
             </File>
+            <File>
+              <FileName>GPIO_Trigger.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\Hardware\GPIO_Trigger.c</FilePath>
+            </File>
+            <File>
+              <FileName>GPIO_Trigger.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\Hardware\GPIO_Trigger.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
