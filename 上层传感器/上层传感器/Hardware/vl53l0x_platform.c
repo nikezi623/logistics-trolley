@@ -1,7 +1,7 @@
 #include "vl53l0x_platform.h"
 #include "vl53l0x_api.h"
 // 这里包含你的软件 IIC 头文件，比如 "MyI2C.h"
-#include "MyI2C.h" 
+#include "MyI2C.h"
 #include "Delay.h"
 
 // 定义传感器 I2C 地址 (8位地址：0x29 << 1 = 0x52)
@@ -13,27 +13,33 @@
 VL53L0X_Error VL53L0X_WriteMulti(VL53L0X_DEV Dev, uint8_t index, uint8_t *pdata, uint32_t count)
 {
     uint32_t i;
-    MyI2C_Start();
-    MyI2C_SendByte(Dev->I2cDevAddr);  // 发送设备写地址
-    if (MyI2C_ReceiveAck() != 0) {
-        MyI2C_Stop();
+    uint8_t bus = Dev->I2cBusId; // 提取总线号
+
+    MyI2C_Start(bus);
+    MyI2C_SendByte(bus, Dev->I2cDevAddr);
+    if (MyI2C_ReceiveAck(bus) != 0)
+    {
+        MyI2C_Stop(bus);
         return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    MyI2C_SendByte(index);            // 发送寄存器地址
-    if (MyI2C_ReceiveAck() != 0) {
-        MyI2C_Stop();
+    MyI2C_SendByte(bus, index);
+    if (MyI2C_ReceiveAck(bus) != 0)
+    {
+        MyI2C_Stop(bus);
         return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    for (i = 0; i < count; i++) {
-        MyI2C_SendByte(pdata[i]);     // 连续写入数据
-        if (MyI2C_ReceiveAck() != 0) {
-            MyI2C_Stop();
+    for (i = 0; i < count; i++)
+    {
+        MyI2C_SendByte(bus, pdata[i]);
+        if (MyI2C_ReceiveAck(bus) != 0)
+        {
+            MyI2C_Stop(bus);
             return VL53L0X_ERROR_CONTROL_INTERFACE;
         }
     }
-    MyI2C_Stop();
+    MyI2C_Stop(bus);
     return VL53L0X_ERROR_NONE;
 }
 
@@ -43,66 +49,80 @@ VL53L0X_Error VL53L0X_WriteMulti(VL53L0X_DEV Dev, uint8_t index, uint8_t *pdata,
 VL53L0X_Error VL53L0X_ReadMulti(VL53L0X_DEV Dev, uint8_t index, uint8_t *pdata, uint32_t count)
 {
     uint32_t i;
-    MyI2C_Start();
-    MyI2C_SendByte(Dev->I2cDevAddr);  // 发送设备写地址 (先写寄存器地址)
-    if (MyI2C_ReceiveAck() != 0) {
-        MyI2C_Stop();
+    uint8_t bus = Dev->I2cBusId; // 提取总线号
+
+    MyI2C_Start(bus);
+    MyI2C_SendByte(bus, Dev->I2cDevAddr);
+    if (MyI2C_ReceiveAck(bus) != 0)
+    {
+        MyI2C_Stop(bus);
         return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    MyI2C_SendByte(index);            // 发送寄存器地址
-    if (MyI2C_ReceiveAck() != 0) {
-        MyI2C_Stop();
+    MyI2C_SendByte(bus, index);
+    if (MyI2C_ReceiveAck(bus) != 0)
+    {
+        MyI2C_Stop(bus);
         return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    MyI2C_Start();                    // 重复起始条件
-    MyI2C_SendByte(Dev->I2cDevAddr | 0x01); // 发送设备读地址 (最低位置1)
-    if (MyI2C_ReceiveAck() != 0) {
-        MyI2C_Stop();
+    MyI2C_Start(bus);
+    MyI2C_SendByte(bus, Dev->I2cDevAddr | 0x01);
+    if (MyI2C_ReceiveAck(bus) != 0)
+    {
+        MyI2C_Stop(bus);
         return VL53L0X_ERROR_CONTROL_INTERFACE;
     }
 
-    for (i = 0; i < count; i++) {
-        pdata[i] = MyI2C_ReceiveByte();
-        if (i == count - 1) {
-            MyI2C_SendAck(1);         // 最后一个字节回复 NACK (1)
-        } else {
-            MyI2C_SendAck(0);         // 其他字节回复 ACK (0)
+    for (i = 0; i < count; i++)
+    {
+        pdata[i] = MyI2C_ReceiveByte(bus);
+        if (i == count - 1)
+        {
+            MyI2C_SendAck(bus, 1);
+        }
+        else
+        {
+            MyI2C_SendAck(bus, 0);
         }
     }
-    MyI2C_Stop();
+    MyI2C_Stop(bus);
     return VL53L0X_ERROR_NONE;
 }
 
 /* --------------------------------------------------------------------------
  * 3. 封装单字节、双字节、四字节的读写 (VL53L0X 是大端模式，高字节在前)
  * -------------------------------------------------------------------------- */
-VL53L0X_Error VL53L0X_WrByte(VL53L0X_DEV Dev, uint8_t index, uint8_t data) {
+VL53L0X_Error VL53L0X_WrByte(VL53L0X_DEV Dev, uint8_t index, uint8_t data)
+{
     return VL53L0X_WriteMulti(Dev, index, &data, 1);
 }
 
-VL53L0X_Error VL53L0X_WrWord(VL53L0X_DEV Dev, uint8_t index, uint16_t data) {
+VL53L0X_Error VL53L0X_WrWord(VL53L0X_DEV Dev, uint8_t index, uint16_t data)
+{
     uint8_t buffer[2];
     buffer[0] = (uint8_t)(data >> 8);
-    buffer[1] = (uint8_t)(data &  0xFF);
+    buffer[1] = (uint8_t)(data & 0xFF);
     return VL53L0X_WriteMulti(Dev, index, buffer, 2);
 }
 
-VL53L0X_Error VL53L0X_WrDWord(VL53L0X_DEV Dev, uint8_t index, uint32_t data) {
+VL53L0X_Error VL53L0X_WrDWord(VL53L0X_DEV Dev, uint8_t index, uint32_t data)
+{
     uint8_t buffer[4];
     buffer[0] = (uint8_t)(data >> 24);
     buffer[1] = (uint8_t)((data >> 16) & 0xFF);
-    buffer[2] = (uint8_t)((data >> 8)  & 0xFF);
+    buffer[2] = (uint8_t)((data >> 8) & 0xFF);
     buffer[3] = (uint8_t)(data & 0xFF);
     return VL53L0X_WriteMulti(Dev, index, buffer, 4);
 }
 
-VL53L0X_Error VL53L0X_RdByte(VL53L0X_DEV Dev, uint8_t index, uint8_t *data) {
+VL53L0X_Error VL53L0X_RdByte(VL53L0X_DEV Dev, uint8_t index, uint8_t *data)
+{
     return VL53L0X_ReadMulti(Dev, index, data, 1);
 }
 
-VL53L0X_Error VL53L0X_RdWord(VL53L0X_DEV Dev, uint8_t index, uint16_t *data) {
+VL53L0X_Error VL53L0X_RdWord(VL53L0X_DEV Dev, uint8_t index, uint16_t *data)
+{
     VL53L0X_Error Status;
     uint8_t buffer[2];
     Status = VL53L0X_ReadMulti(Dev, index, buffer, 2);
@@ -110,7 +130,8 @@ VL53L0X_Error VL53L0X_RdWord(VL53L0X_DEV Dev, uint8_t index, uint16_t *data) {
     return Status;
 }
 
-VL53L0X_Error VL53L0X_RdDWord(VL53L0X_DEV Dev, uint8_t index, uint32_t *data) {
+VL53L0X_Error VL53L0X_RdDWord(VL53L0X_DEV Dev, uint8_t index, uint32_t *data)
+{
     VL53L0X_Error Status;
     uint8_t buffer[4];
     Status = VL53L0X_ReadMulti(Dev, index, buffer, 4);
@@ -118,14 +139,15 @@ VL53L0X_Error VL53L0X_RdDWord(VL53L0X_DEV Dev, uint8_t index, uint32_t *data) {
     return Status;
 }
 
-VL53L0X_Error VL53L0X_UpdateByte(VL53L0X_DEV Dev, uint8_t index, uint8_t AndData, uint8_t OrData) 
+VL53L0X_Error VL53L0X_UpdateByte(VL53L0X_DEV Dev, uint8_t index, uint8_t AndData, uint8_t OrData)
 {
     VL53L0X_Error Status = VL53L0X_ERROR_NONE;
     uint8_t data;
-    
+
     // 先读出当前寄存器的值
     Status = VL53L0X_RdByte(Dev, index, &data);
-    if (Status == VL53L0X_ERROR_NONE) {
+    if (Status == VL53L0X_ERROR_NONE)
+    {
         // 进行位掩码操作后重新写入
         data = (data & AndData) | OrData;
         Status = VL53L0X_WrByte(Dev, index, data);
@@ -136,9 +158,9 @@ VL53L0X_Error VL53L0X_UpdateByte(VL53L0X_DEV Dev, uint8_t index, uint8_t AndData
 /* --------------------------------------------------------------------------
  * 补充函数 2：API 内部轮询等待时的延时函数
  * -------------------------------------------------------------------------- */
-VL53L0X_Error VL53L0X_PollingDelay(VL53L0X_DEV Dev) 
+VL53L0X_Error VL53L0X_PollingDelay(VL53L0X_DEV Dev)
 {
     // 调用你的标准库毫秒延时函数，通常 2ms 到 5ms 即可
-    Delay_ms(2); 
+    Delay_ms(2);
     return VL53L0X_ERROR_NONE;
 }

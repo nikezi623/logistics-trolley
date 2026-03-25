@@ -1,7 +1,9 @@
 #include "PHC_HeadFile.h"
 
-extern void VL53L0X_Init(void);
-extern int16_t VL53L0X_GetDistance_NonBlocking(void);
+extern VL53L0X_DEV Dev1;
+extern VL53L0X_DEV Dev2;
+extern void VL53L0X_InitAll(void);
+extern int16_t VL53L0X_GetDistance_NonBlocking(VL53L0X_DEV Dev);
 
 uint8_t KeyNum, RunFlag; // runflag表示运行启停
 uint16_t time_count;
@@ -16,13 +18,15 @@ int main(void)
     Init_All();
 
     // 调用全新的 API 初始化 (这会执行校准逻辑)
-    VL53L0X_Init();
+    VL53L0X_InitAll();
     Trigger_Middle_Init();
     // Trigger_Set_Low(GPIOA, GPIO_Pin_12);
 
-    uint8_t SensorStatus; // 用于存储当前传感器状态
-    int16_t dist = 0;     // 激光测距传感器数据
-    int16_t raw_dist = 0; // 加一个变量存原始数据
+    uint8_t SensorStatus;  // 用于存储当前传感器状态
+    int16_t dist1 = 0;     // 激光测距传感器数据
+    int16_t dist2 = 0;     // 激光测距传感器数据
+    int16_t raw_dist1 = 0; // 加一个变量存原始数据
+    int16_t raw_dist2 = 0; // 加一个变量存原始数据
 
     // 进主循环前，先触发第一次测距！
     //    MyLaserSensor_StartRanging();
@@ -31,24 +35,27 @@ int main(void)
     {
         // 获取一次当前的传感器状态
         SensorStatus = GLE_GetStatus();
-        raw_dist = VL53L0X_GetDistance_NonBlocking();
+        // raw_dist = VL53L0X_GetDistance_NonBlocking();
+
+        raw_dist1 = VL53L0X_GetDistance_NonBlocking(Dev1);
+        raw_dist2 = VL53L0X_GetDistance_NonBlocking(Dev2);
 
         // 【核心修复】加入“漏桶容错”算法，防止圆柱体边缘散射导致误清零
-        if (raw_dist != -2)
+        if (raw_dist1 != -2)
         {
-            if (raw_dist > 0 && raw_dist <= 300)
+            if (raw_dist1 > 0 && raw_dist1 <= 300)
             {
-                dist = raw_dist;
+                dist1 = raw_dist1;
                 avoid_count += 2; // 看到障碍物，快速增加置信度
                 if (avoid_count > 6)
                     avoid_count = 6; // 设定一个上限
             }
             else
             {
-                if (raw_dist > 0)
-                    dist = raw_dist;
-                else if (raw_dist == -1)
-                    dist = -1;
+                if (raw_dist1 > 0)
+                    dist1 = raw_dist1;
+                else if (raw_dist1 == -1)
+                    dist1 = -1;
 
                 if (avoid_count > 0)
                     avoid_count--; // 没看到障碍物或报错，缓慢扣分（容错）
@@ -66,20 +73,32 @@ int main(void)
             }
         }
 
-        // 如果 raw_dist == -2，程序会直接跳过上面的 if，
-        // 完美保留上一次的 dist 值，屏幕就不会闪烁了！
+		// 【新增 D2 过滤逻辑】和 D1 一样，只有测好了才更新 dist2
+        if (raw_dist2 != -2)
+        {
+            if (raw_dist2 > 0)
+            {
+                dist2 = raw_dist2; // 更新最新距离
+            }
+            else if (raw_dist2 == -1)
+            {
+                dist2 = -1; // 标记报错状态
+            }
+        }
+		
         // OLED
         // --- 1. 基础数据显示 ---
         OLED_ShowBinNum(0, 0, SensorStatus, 8, OLED_8X16);
-        OLED_ShowNum(0, 16, KeyNum, 1, OLED_8X16);
-        if (dist == -1)
+        if (dist1 == -1)
         {
-            OLED_Printf(0, 48, OLED_8X16, "Dis:ERROR"); // 错误时显示 ERROR
+            OLED_Printf(0, 16, OLED_8X16, "D1:ERROR"); // 错误时显示 ERROR
         }
         else
         {
-            OLED_Printf(0, 48, OLED_8X16, "Dis:%04dmm", dist); // 去掉没必要的 + 号，显示四位数字
+            OLED_Printf(0, 16, OLED_8X16, "D1:%04dmm", dist1); // 去掉没必要的 + 号，显示四位数字
         }
+
+        OLED_Printf(0, 48, OLED_8X16, "D2:%04dmm", dist2);
 
         // --- 2. 传感器状态可视化 (图形法) ---
         OLED_ClearArea(0, 32, 128, 16);

@@ -5,13 +5,13 @@
 #ifndef __MYLASERSENSOR_H
 #define __MYLASERSENSOR_H
 
-// 传感器默认 I2C 地址 (8位)
-#define VL53L0X_DEFAULT_ADDRESS  0x52
+//// 传感器默认 I2C 地址 (8位)
+//#define VL53L0X_DEFAULT_ADDRESS  0x52
 
-// 函数声明
-void MyLaserSensor_Init(void);
-uint16_t MyLaserSensor_ReadDistance(void);
-void MyLaserSensor_StartRanging(void);
-int16_t MyLaserSensor_CheckAndRead(void);
+//// 函数声明
+//void MyLaserSensor_Init(void);
+//uint16_t MyLaserSensor_ReadDistance(void);
+//void MyLaserSensor_StartRanging(void);
+//int16_t MyLaserSensor_CheckAndRead(void);
 
 #endif
