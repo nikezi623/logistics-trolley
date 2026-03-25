@@ -7,21 +7,23 @@
 
 /* 1. 打破循环依赖：先声明结构体和指针，再包含官方 def 头文件 */
 typedef struct VL53L0X_Dev_t VL53L0X_Dev_t;
-typedef VL53L0X_Dev_t* VL53L0X_DEV;
+typedef VL53L0X_Dev_t *VL53L0X_DEV;
 
 #include "vl53l0x_def.h"
 
 /* 2. 定义设备结构体 */
-struct VL53L0X_Dev_t {
-    VL53L0X_DevData_t Data;           /*!< ST API 强依赖这个名为 Data 的成员！ */
-    uint8_t           I2cDevAddr;     /*!< I2C 从机地址 */
-    uint8_t           comms_type;     /*!< 通信类型 */
-    uint16_t          comms_speed_khz;/*!< 通信速率 */
+struct VL53L0X_Dev_t
+{
+    VL53L0X_DevData_t Data;   /*!< ST API 强依赖这个名为 Data 的成员！ */
+    uint8_t I2cDevAddr;       /*!< I2C 从机地址 */
+    uint8_t comms_type;       /*!< 通信类型 */
+    uint16_t comms_speed_khz; /*!< 通信速率 */
+    uint8_t I2cBusId;         // <--- 新增：标识 I2C 总线号 (0或1)
 };
 
 /* 3. 屏蔽官方内部的繁琐日志打印 */
 #define VL53L0X_LOG_ENABLE 0
-#define TRACE_MODULE_API   0
+#define TRACE_MODULE_API 0
 #define _LOG_FUNCTION_START(module, fmt, ...) (void)0
 #define _LOG_FUNCTION_END(module, status, ...) (void)0
 #define _LOG_FUNCTION_END_FMT(module, status, fmt, ...) (void)0

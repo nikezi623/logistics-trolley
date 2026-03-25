@@ -39,6 +39,7 @@
 ".\objects\encoder.o"
 ".\objects\serial.o"
 ".\objects\blueserial.o"
+".\objects\gpio_trigger.o"
 ".\objects\main.o"
 ".\objects\stm32f10x_it.o"
 ".\objects\pid.o"

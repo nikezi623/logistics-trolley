@@ -19,5 +19,6 @@
 #include "InitAll.h"
 #include "GreenLightEyes.h"
 #include "MyLaserSensor.h"
+#include "GPIO_Trigger.h"
 
 #endif

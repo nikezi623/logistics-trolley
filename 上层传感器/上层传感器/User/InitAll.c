@@ -3,7 +3,7 @@
 void Init_All(void)
 {
     OLED_Init();
-	MPU6050_Init();
+//	MPU6050_Init();
 	Timer_Init();
 	BlueSerial_Init();
 	LED_Init();
@@ -12,5 +12,5 @@ void Init_All(void)
 	Key_Init();
 	Motor_Init();
 	GLE_Init();
-	MyLaserSensor_Init();
+//	MyLaserSensor_Init();
 }
