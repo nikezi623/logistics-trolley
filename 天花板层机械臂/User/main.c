@@ -13,8 +13,8 @@ int main(void)
     /* 2. 上电复位：让四个舵机先缓慢回到中位 (90度 -> 对应 1500us) */ //20000
     Servo_Control(1, 2000); //底盘初始位置
     Servo_Control(2, 500); //短臂初始位置
-    Servo_Control(3, 1350); //长臂初始位置
-    Servo_Control(4, 1100); //夹爪初始位置
+    Servo_Control(3, 1300); //长臂初始位置
+    Servo_Control(4, 1800); //夹爪初始位置，1800的夹取是合适的
     Delay_ms(1000); // 等待舵机走到位
 
     // Trigger_Set_Low(GPIOA, GPIO_Pin_12);
