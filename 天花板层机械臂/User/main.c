@@ -10,11 +10,11 @@ int main(void)
 
     Trigger_Top_Init();
 
-    /* 2. 上电复位：让四个舵机先缓慢回到中位 (90度 -> 对应 1500us) */
-    Servo_Control(1, 1500);
-    Servo_Control(2, 1500);
-    Servo_Control(3, 1500);
-    Servo_Control(4, 1500);
+    /* 2. 上电复位：让四个舵机先缓慢回到中位 (90度 -> 对应 1500us) */ //20000
+    Servo_Control(1, 2000); //底盘初始位置
+    Servo_Control(2, 500); //短臂初始位置
+    Servo_Control(3, 1350); //长臂初始位置
+    Servo_Control(4, 1100); //夹爪初始位置
     Delay_ms(1000); // 等待舵机走到位
 
     // Trigger_Set_Low(GPIOA, GPIO_Pin_12);
@@ -22,39 +22,39 @@ int main(void)
     {
         if (Trigger_Read_Pin(GPIOA, GPIO_Pin_12) == 1 && flag == 0)
         {
-            /* 测试动作 1：所有舵机平滑转到 0 度 (对应 500us) */
-            for (pulse = 1500; pulse >= 500; pulse -= 10)
-            {
-                Servo_Control(1, pulse);
-                Servo_Control(2, pulse);
-                Servo_Control(3, pulse);
-                Servo_Control(4, pulse);
-                Delay_ms(10); // 每次改变角度停顿 10ms，形成平滑动画
-            }
+            // /* 测试动作 1：所有舵机平滑转到 0 度 (对应 500us) */
+            // for (pulse = 1500; pulse >= 500; pulse -= 10)
+            // {
+            //     Servo_Control(1, pulse);
+            //     Servo_Control(2, pulse);
+            //     Servo_Control(3, pulse);
+            //     Servo_Control(4, pulse);
+            //     Delay_ms(10); // 每次改变角度停顿 10ms，形成平滑动画
+            // }
 
-            Delay_ms(500); // 在 0 度位置停留 0.5 秒
+            // Delay_ms(500); // 在 0 度位置停留 0.5 秒
 
-            /* 测试动作 2：所有舵机平滑转到 180 度 (对应 2500us) */
-            for (pulse = 500; pulse <= 2500; pulse += 10)
-            {
-                Servo_Control(1, pulse);
-                Servo_Control(2, pulse);
-                Servo_Control(3, pulse);
-                Servo_Control(4, pulse);
-                Delay_ms(10);
-            }
+            // /* 测试动作 2：所有舵机平滑转到 180 度 (对应 2500us) */
+            // for (pulse = 500; pulse <= 2500; pulse += 10)
+            // {
+            //     Servo_Control(1, pulse);
+            //     Servo_Control(2, pulse);
+            //     Servo_Control(3, pulse);
+            //     Servo_Control(4, pulse);
+            //     Delay_ms(10);
+            // }
 
-            Delay_ms(500); // 在 180 度位置停留 0.5 秒
+            // Delay_ms(500); // 在 180 度位置停留 0.5 秒
 
-            /* 测试动作 3：回到中位，准备下一次循环 */
-            for (pulse = 2500; pulse >= 1500; pulse -= 10)
-            {
-                Servo_Control(1, pulse);
-                Servo_Control(2, pulse);
-                Servo_Control(3, pulse);
-                Servo_Control(4, pulse);
-                Delay_ms(10);
-            }
+            // /* 测试动作 3：回到中位，准备下一次循环 */
+            // for (pulse = 2500; pulse >= 1500; pulse -= 10)
+            // {
+            //     Servo_Control(1, pulse);
+            //     Servo_Control(2, pulse);
+            //     Servo_Control(3, pulse);
+            //     Servo_Control(4, pulse);
+            //     Delay_ms(10);
+            // }
 
             flag++;
 
