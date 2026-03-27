@@ -33,8 +33,8 @@ double LeftSpeed, RightSpeed, AvgSpeed, DifSpeed;
 // ==========================================
 // 4. PID 与 巡线控制参数
 // ==========================================
-#define COMMONSPEED 1.56
-#define BASE_SPEED 1.56 // 基础直道速度
+#define COMMONSPEED 1.86
+#define BASE_SPEED 1.86 // 基础直道速度
 #define MIN_SPEED 1.00	// 弯道最低速度
 
 float VISION_KI = 0;	  // 视觉误差积分系数 (从0慢慢调)
@@ -234,7 +234,7 @@ int main(void)
 					right_angle_turn_flag = 4;
 					DelayCount_right_turn = 0;
 				}
-				else if (right_angle_turn_flag == 4 && DelayCount_right_turn >= 850)
+				else if (right_angle_turn_flag == 4 && DelayCount_right_turn >= 786)
 				{
 					DelayCount_right_turn = 0;
 					PID_Init(&SpeedPID);
@@ -370,6 +370,10 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					RightPWM = AvgPWM - DifPWM / 2;
 
 					int16_t PWMMax = 33;
+					if (ConFlag == 1 || ConFlag == 2)
+					{
+						PWMMax = 26;
+					}
 					// PWM 限幅
 					if (LeftPWM >= PWMMax)
 						LeftPWM = PWMMax;
@@ -452,10 +456,10 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				else if (avoid_flag == 2 && DelayCount_avoid >= 850) // 1秒足够原地转45度了
 				{
 					DelayCount_avoid = 0;
-					SpeedPID.Target = 0.86; // 慢速直线绕开圆柱
+					SpeedPID.Target = 1.86; // 慢速直线绕开圆柱
 					avoid_flag = 3;
 				}
-				else if (avoid_flag == 3 && DelayCount_avoid >= 3386) // 斜向直行的时间（根据实际距离调）
+				else if (avoid_flag == 3 && DelayCount_avoid >= 1886) // 斜向直行的时间（根据实际距离调）
 				{
 					DelayCount_avoid = 0;
 					SpeedPID.Target = 0; // 再次停车准备转向
@@ -524,7 +528,9 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				}
 				else if (RxCmd == 2 && all_black_flag == 3)
 					all_black_flag = 4;
-				else if (RxCmd == 1 && all_black_flag == 4) // 等待终点
+				else if ((RxCmd == 1 || RxCmd == 81 || RxCmd == 91 || RxCmd == 82 ||
+						  RxCmd == 92 || RxCmd == 83 || RxCmd == 93) &&
+						 all_black_flag == 4) // 等待终点
 					RunFlag = 0;
 
 				// --- 3. 捕捉进入直角转弯 ---
