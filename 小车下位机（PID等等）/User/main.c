@@ -491,6 +491,9 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					PID_Init(&SpeedPID);
 					PID_Init(&TurnPID_Vision); // 视觉PID接手时，误差已经很小了
 					ConFlag = 0;			   // 恢复正常巡线状态
+					all_black_flag = 2;
+					PID_Init(&SpeedPID);
+					PID_Init(&TurnPID_Gyro);
 				}
 			}
 
@@ -507,8 +510,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					send_item_flag = 1;
 					is_startup_flag = 1;
 					Base_Yaw = 83;
-					PID_Init(&SpeedPID);
-					PID_Init(&TurnPID_Gyro);
+					SpeedPID.Target = 0;
 					Serial_SendByte(86);
 
 					if (DelayCount_send_item >= 2000)
@@ -524,19 +526,6 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					all_black_flag = 4;
 				else if (RxCmd == 1 && all_black_flag == 4) // 等待终点
 					RunFlag = 0;
-
-				// --- 2. 判断退出直角转弯 ---
-				// 修改点：只在直角转弯时 (ConFlag == 1 或 2) 允许被居中指令打断
-				// if ((ConFlag == 1 || ConFlag == 2) && (RxCmd == 31 || RxCmd == 32 || RxCmd == 33))
-				// {
-				// 	ConFlag = 0;
-				// 	is_startup_flag = 0;
-				// 	Vision_Error_Integral = 0;
-				// 	Last_Vision_Error = 0;
-				// 	PID_Init(&SpeedPID);
-				// 	PID_Init(&TurnPID_Vision);
-				// 	TurnPID_Vision.Offset = 0; // ⚠️ 极其重要：巡线模式必须清零偏置！
-				// }
 
 				// --- 3. 捕捉进入直角转弯 ---
 				if (ConFlag == 0 && have_turned_flag == 0) // 正常巡线状态+还未转直角弯
