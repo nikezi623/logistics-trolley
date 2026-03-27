@@ -1158,8 +1158,8 @@ I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
 I (D:\K32\ARM\ARMCC\include\stdio.h)(0x588B8344)
 I (D:\K32\ARM\ARMCC\include\stdarg.h)(0x588B8344)
-F (.\Hardware\GPIO_Trigger.c)(0x69C2AF4C)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\gpio_trigger.o --omf_browse .\objects\gpio_trigger.crf --depend .\objects\gpio_trigger.d)
-I (Hardware\GPIO_Trigger.h)(0x69C2AF4C)
+F (.\Hardware\GPIO_Trigger.c)(0x69C3E5A9)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\gpio_trigger.o --omf_browse .\objects\gpio_trigger.crf --depend .\objects\gpio_trigger.d)
+I (Hardware\GPIO_Trigger.h)(0x69C3E5A9)
 I (.\Start\stm32f10x.h)(0x4D783CB4)
 I (.\Start\core_cm3.h)(0x4D523B58)
 I (D:\K32\ARM\ARMCC\include\stdint.h)(0x588B8344)
@@ -1188,8 +1188,8 @@ I (.\Library\stm32f10x_tim.h)(0x4D783BB4)
 I (.\Library\stm32f10x_usart.h)(0x4D783BB4)
 I (.\Library\stm32f10x_wwdg.h)(0x4D783BB4)
 I (.\Library\misc.h)(0x4D783BB4)
-F (.\Hardware\GPIO_Trigger.h)(0x69C2AF4C)()
-F (.\User\main.c)(0x69C2BAB3)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
+F (.\Hardware\GPIO_Trigger.h)(0x69C3E5A9)()
+F (.\User\main.c)(0x69C6BDA0)(--c99 -c --cpu Cortex-M3 -g -O0 --apcs=interwork --split_sections -I .\Start -I .\Library -I .\User -I .\System -I .\Hardware --no-multibyte-chars-I.\RTE\_Target_1-ID:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include-ID:\K32\ARM\CMSIS\Include-D__UVISION_VERSION="524" -DSTM32F10X_MD -DUSE_STDPERIPH_DRIVER-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
 I (User\PHC_HeadFile.h)(0x697DD515)
 I (.\Start\stm32f10x.h)(0x4D783CB4)
 I (.\Start\core_cm3.h)(0x4D523B58)
