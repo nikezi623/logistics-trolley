@@ -1,5 +1,6 @@
 #include "PHC_HeadFile.h"
 
+#pragma region 外部设备与全局变量声明
 extern VL53L0X_DEV Dev1;
 extern VL53L0X_DEV Dev2;
 extern void VL53L0X_InitAll(void);
@@ -7,39 +8,83 @@ extern int16_t VL53L0X_GetDistance_NonBlocking(VL53L0X_DEV Dev);
 
 uint8_t KeyNum, RunFlag; // runflag表示运行启停
 uint16_t time_count;
+uint8_t RxCmd;
 
+// --- 避障与测距相关参数 ---
 uint8_t avoid_count = 0;   // 连续检测到障碍物的次数
 uint8_t Obstacle_Flag = 0; // 确认为真实障碍物的标志位
+int16_t dist1 = 0;         // D1 激光测距传感器过滤后数据
+int16_t dist2 = 0;         // D2 激光测距传感器过滤后数据
+int16_t raw_dist1 = 0;     // D1 原始数据
+int16_t raw_dist2 = 0;     // D2 原始数据
 
-uint8_t RxCmd;
+// --- 巡线传感器参数 ---
+uint8_t SensorStatus = 0;  // 用于存储当前传感器状态
+#pragma endregion
+
+#pragma region OLED UI 显示更新函数
+void Show_parameter(void)
+{
+    // --- 1. 基础数据显示 ---
+    OLED_ShowBinNum(0, 0, SensorStatus, 8, OLED_8X16);
+    
+    if (dist1 == -1)
+    {
+        OLED_Printf(0, 16, OLED_8X16, "D1:ERROR"); // 错误时显示 ERROR
+    }
+    else
+    {
+        OLED_Printf(0, 16, OLED_8X16, "D1:%04dmm", dist1); // 显示四位数字
+    }
+
+    OLED_Printf(0, 48, OLED_8X16, "D2:%04dmm", dist2);
+
+    // --- 2. 传感器状态可视化 (图形法) ---
+    OLED_ClearArea(0, 32, 128, 16);
+    for (int i = 0; i < 8; i++)
+    {
+        if ((SensorStatus & (0x80 >> i)) == 0) // 0代表触发(压黑线)
+        {
+            OLED_DrawRectangle(i * 16, 32, 14, 14, OLED_FILLED);
+        }
+        else // 白底
+        {
+            OLED_DrawRectangle(i * 16, 32, 14, 14, OLED_UNFILLED);
+        }
+    }
+
+    OLED_Update();
+}
+#pragma endregion
 
 int main(void)
 {
     Init_All();
 
-    // 调用全新的 API 初始化 (这会执行校准逻辑)
+    // ==========================================
+    // 启动加载画面 (UX优化)
+    // ==========================================
+    OLED_Clear();
+    OLED_Printf(0, 0, OLED_8X16, "System Booting..");
+    OLED_Printf(0, 32, OLED_8X16, "Init VL53L0X x2");
+    OLED_Update();
+
+    // 调用极其耗时的 API 初始化 (这会执行校准逻辑)
     VL53L0X_InitAll();
     Trigger_Middle_Init();
-    // Trigger_Set_Low(GPIOA, GPIO_Pin_12);
-
-    uint8_t SensorStatus;  // 用于存储当前传感器状态
-    int16_t dist1 = 0;     // 激光测距传感器数据
-    int16_t dist2 = 0;     // 激光测距传感器数据
-    int16_t raw_dist1 = 0; // 加一个变量存原始数据
-    int16_t raw_dist2 = 0; // 加一个变量存原始数据
-
-    // 进主循环前，先触发第一次测距！
-    //    MyLaserSensor_StartRanging();
+    
+    // 初始化完成，清屏进入主工作流
+    OLED_Clear();
+    OLED_Update();
 
     while (1)
     {
-        // 获取一次当前的传感器状态
+        // 1. 获取所有传感器原始数据
         SensorStatus = GLE_GetStatus();
-        // raw_dist = VL53L0X_GetDistance_NonBlocking();
-
         raw_dist1 = VL53L0X_GetDistance_NonBlocking(Dev1);
         raw_dist2 = VL53L0X_GetDistance_NonBlocking(Dev2);
 
+#pragma region TOF 漏桶容错过滤算法
         // 【核心修复】加入“漏桶容错”算法，防止圆柱体边缘散射导致误清零
         if (raw_dist1 != -2)
         {
@@ -85,44 +130,19 @@ int main(void)
                 dist2 = -1; // 标记报错状态
             }
         }
+#pragma endregion
 
-        // OLED
-        // --- 1. 基础数据显示 ---
-        OLED_ShowBinNum(0, 0, SensorStatus, 8, OLED_8X16);
-        if (dist1 == -1)
-        {
-            OLED_Printf(0, 16, OLED_8X16, "D1:ERROR"); // 错误时显示 ERROR
-        }
-        else
-        {
-            OLED_Printf(0, 16, OLED_8X16, "D1:%04dmm", dist1); // 去掉没必要的 + 号，显示四位数字
-        }
+        // 2. 刷新屏幕
+        Show_parameter();
 
-        OLED_Printf(0, 48, OLED_8X16, "D2:%04dmm", dist2);
-
-        // --- 2. 传感器状态可视化 (图形法) ---
-        OLED_ClearArea(0, 32, 128, 16);
-        for (int i = 0; i < 8; i++)
-        {
-            if ((SensorStatus & (0x80 >> i)) == 0)
-            {
-                OLED_DrawRectangle(i * 16, 32, 14, 14, OLED_FILLED);
-            }
-            else
-            {
-                OLED_DrawRectangle(i * 16, 32, 14, 14, OLED_UNFILLED);
-            }
-        }
-
-        OLED_Update();
-
+#pragma region 灰度状态机与串口下发逻辑
+        // 【优先级最高】避障触发
         if (Obstacle_Flag == 1)
         {
             Serial_SendByte(99);
         }
         // =====================================
         // 1. 严格的直角指令 (半边至少 3-5 个灯全黑才算直角)
-        // 传感器状态：0 = 压黑线，1 = 白底白线
         // =====================================
         else if (SensorStatus == 0x07 || SensorStatus == 0x03 || SensorStatus == 0x01) // 0b 0000 0111 (左边5个探头全压线)
         {
@@ -227,12 +247,13 @@ int main(void)
         {
             Serial_SendByte(1);
         }
+#pragma endregion
     }
 }
 
+#pragma region 定时器中断处理
 void TIM1_UP_IRQHandler(void) // 1ms进入一次
 {
-
     if (TIM_GetITStatus(TIM1, TIM_IT_Update) == SET)
     {
         // 清除中断标志位
@@ -247,27 +268,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
         {
             Trigger_Set_High(GPIOA, GPIO_Pin_12);
         }
-        // else
-        // {
-        //     Trigger_Set_Low(GPIOA, GPIO_Pin_12);
-        // }
     }
 }
+#pragma endregion
 
-/*
-
-状态描述,			涉及的传感器位 (0为触发),	二进制 (Bin),	十六进制 (Hex),	发送指令
-丢线,				无,							1111 1111,		0xFF,			2
-居中,				"3, 4",						1110 0111,		0xE7,			3
-居中 (容错),		4 (左中单灯),				1110 1111,		0xEF,			3
-居中 (容错),		3 (右中单灯),				1111 0111,		0xF7,			3
-轻微偏右,			"2, 3",						1111 0011,		0xF3,			4
-轻微偏右 (容错),	2 (单灯),					1111 1011,		0xFB,			4
-严重偏右,			1,							1111 1101,		0xFD,			5
-严重偏右 (容错),	0 (最外侧单灯),				1111 1110,		0xFE,			5
-轻微偏左,			"4, 5",						1100 1111,		0xCF,			6
-轻微偏左 (容错),	5 (单灯),					1101 1111,		0xDF,			6
-严重偏左,			6,							1011 1111,		0xBF,			7
-严重偏左 (容错),	7 (最外侧单灯),				0111 1111,		0x7F,			7
-
-*/
