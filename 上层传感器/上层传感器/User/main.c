@@ -17,6 +17,13 @@ int main(void)
 {
     Init_All();
 
+    // 2. 立刻接管屏幕，显示“加载中”提示！
+    OLED_Clear();
+    OLED_Printf(0, 0, OLED_8X16, "System Booting..");
+    OLED_Printf(0, 32, OLED_8X16, "Init VL53L0X x2");
+    OLED_Update();
+    // 现在上电瞬间屏幕就会亮起，你就知道单片机没死机
+
     // 调用全新的 API 初始化 (这会执行校准逻辑)
     VL53L0X_InitAll();
     Trigger_Middle_Init();
@@ -30,7 +37,9 @@ int main(void)
 
     // 进主循环前，先触发第一次测距！
     //    MyLaserSensor_StartRanging();
-
+    OLED_Clear();
+    OLED_Update();
+    
     while (1)
     {
         // 获取一次当前的传感器状态
