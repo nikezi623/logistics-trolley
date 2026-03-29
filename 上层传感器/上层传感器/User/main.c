@@ -19,7 +19,10 @@ int16_t raw_dist1 = 0;     // D1 原始数据
 int16_t raw_dist2 = 0;     // D2 原始数据
 
 // --- 巡线传感器参数 ---
-uint8_t SensorStatus = 0;  // 用于存储当前传感器状态
+uint8_t SensorStatus = 0; // 用于存储当前传感器状态
+
+// --- 标志位 ---
+uint8_t if_return_freight_location = 0;
 #pragma endregion
 
 #pragma region OLED UI 显示更新函数
@@ -27,7 +30,7 @@ void Show_parameter(void)
 {
     // --- 1. 基础数据显示 ---
     OLED_ShowBinNum(0, 0, SensorStatus, 8, OLED_8X16);
-    
+
     if (dist1 == -1)
     {
         OLED_Printf(0, 16, OLED_8X16, "D1:ERROR"); // 错误时显示 ERROR
@@ -72,7 +75,7 @@ int main(void)
     // 调用极其耗时的 API 初始化 (这会执行校准逻辑)
     VL53L0X_InitAll();
     Trigger_Middle_Init();
-    
+
     // 初始化完成，清屏进入主工作流
     OLED_Clear();
     OLED_Update();
@@ -132,122 +135,141 @@ int main(void)
         }
 #pragma endregion
 
-        // 2. 刷新屏幕
-        Show_parameter();
-
-#pragma region 灰度状态机与串口下发逻辑
-        // 【优先级最高】避障触发
-        if (Obstacle_Flag == 1)
+#pragma region 货站判断
+        if (dist2 <= 306)
         {
-            Serial_SendByte(99);
-        }
-        // =====================================
-        // 1. 严格的直角指令 (半边至少 3-5 个灯全黑才算直角)
-        // =====================================
-        else if (SensorStatus == 0x07 || SensorStatus == 0x03 || SensorStatus == 0x01) // 0b 0000 0111 (左边5个探头全压线)
-        {
-            Serial_SendByte(91); // 真正的左直角
-        }
-        else if (SensorStatus == 0x0F) // 0b 0000 1111 (左边4个探头压线)
-        {
-            Serial_SendByte(92); // 真正的左直角
-        }
-        else if (SensorStatus == 0x1F) // 0b 0001 1111 (左边3个探头压线)
-        {
-            Serial_SendByte(93); // 真正的左直角
-        }
-        else if (SensorStatus == 0xE0 || SensorStatus == 0xC0 || SensorStatus == 0x80) // 0b 1110 0000 (右边5个探头全压线)
-        {
-            Serial_SendByte(81); // 真正的右直角
-        }
-        else if (SensorStatus == 0xF0) // 0b 1111 0000 (右边4个探头压线)
-        {
-            Serial_SendByte(82); // 真正的右直角
-        }
-        else if (SensorStatus == 0xF8) // 0b 1111 1000 (右边3个探头压线)
-        {
-            Serial_SendByte(83); // 真正的右直角
-        }
-
-        // =====================================
-        // 2. 正常巡线逻辑 (细分纠偏)
-        // =====================================
-        // --- 居中 (3) ---
-        else if (SensorStatus == 0xE7) // 0b 1110 0111 (中间2个探头压线)
-        {
-            Serial_SendByte(31);
-        }
-        else if (SensorStatus == 0xEF) // 0b 1110 1111 (中间偏左1个探头压线)
-        {
-            Serial_SendByte(32);
-        }
-        else if (SensorStatus == 0xF7) // 0b 1111 0111 (中间偏右1个探头压线)
-        {
-            Serial_SendByte(33);
-        }
-
-        // --- 偏右侧 (4, 5) ---
-        else if (SensorStatus == 0xF3) // 0b 1111 0011 (右侧2个探头压线)
-        {
-            Serial_SendByte(41);
-        }
-        else if (SensorStatus == 0xFB) // 0b 1111 1011 (右侧偏内1个探头压线)
-        {
-            Serial_SendByte(42);
-        }
-        else if (SensorStatus == 0xF9) // 0b 1111 1001 (右侧偏外2个探头压线)
-        {
-            Serial_SendByte(43);
-        }
-        else if (SensorStatus == 0xFD) // 0b 1111 1101 (最右侧第2个探头压线)
-        {
-            Serial_SendByte(51);
-        }
-        else if (SensorStatus == 0xFC) // 0b 1111 1100 (最右侧边缘2个探头压线)
-        {
-            Serial_SendByte(52);
-        }
-        else if (SensorStatus == 0xFE) // 0b 1111 1110 (最右侧单探头压线)
-        {
-            Serial_SendByte(53);
-        }
-
-        // --- 偏左侧 (6, 7) ---
-        else if (SensorStatus == 0xCF) // 0b 1100 1111 (左侧2个探头压线)
-        {
-            Serial_SendByte(61);
-        }
-        else if (SensorStatus == 0xDF) // 0b 1101 1111 (左侧偏内1个探头压线)
-        {
-            Serial_SendByte(62);
-        }
-        else if (SensorStatus == 0x9F) // 0b 1001 1111 (左侧偏外2个探头压线)
-        {
-            Serial_SendByte(63);
-        }
-        else if (SensorStatus == 0xBF) // 0b 1011 1111 (最左侧第2个探头压线)
-        {
-            Serial_SendByte(71);
-        }
-        else if (SensorStatus == 0x3F) // 0b 0011 1111 (最左侧边缘2个探头压线)
-        {
-            Serial_SendByte(72);
-        }
-        else if (SensorStatus == 0x7F) // 0b 0111 1111 (最左侧单探头压线)
-        {
-            Serial_SendByte(73);
-        }
-
-        // --- 异常状态 ---
-        else if (SensorStatus == 0xFF) // 0b 1111 1111 (纯白，全丢线)
-        {
-            Serial_SendByte(2);
-        }
-        else if (SensorStatus == 0x00) // 0b 0000 0000 (纯黑，或者路口中心)
-        {
-            Serial_SendByte(1);
         }
 #pragma endregion
+
+        // 2. 刷新屏幕
+        Show_parameter();
+        if (if_return_freight_location == 0)
+        {
+#pragma region 灰度状态机与串口下发逻辑
+            // 【优先级最高】避障触发
+            if (Obstacle_Flag == 1)
+            {
+                Serial_SendByte(99);
+            }
+            // =====================================
+            // 1. 严格的直角指令 (半边至少 3-5 个灯全黑才算直角)
+            // =====================================
+            else if (SensorStatus == 0x07 || SensorStatus == 0x03 || SensorStatus == 0x01) // 0b 0000 0111 (左边5个探头全压线)
+            {
+                Serial_SendByte(91); // 真正的左直角
+            }
+            else if (SensorStatus == 0x0F) // 0b 0000 1111 (左边4个探头压线)
+            {
+                Serial_SendByte(92); // 真正的左直角
+            }
+            else if (SensorStatus == 0x1F) // 0b 0001 1111 (左边3个探头压线)
+            {
+                Serial_SendByte(93); // 真正的左直角
+            }
+            else if (SensorStatus == 0xE0 || SensorStatus == 0xC0 || SensorStatus == 0x80) // 0b 1110 0000 (右边5个探头全压线)
+            {
+                Serial_SendByte(81); // 真正的右直角
+            }
+            else if (SensorStatus == 0xF0) // 0b 1111 0000 (右边4个探头压线)
+            {
+                Serial_SendByte(82); // 真正的右直角
+            }
+            else if (SensorStatus == 0xF8) // 0b 1111 1000 (右边3个探头压线)
+            {
+                Serial_SendByte(83); // 真正的右直角
+            }
+
+            // =====================================
+            // 2. 正常巡线逻辑 (细分纠偏)
+            // =====================================
+            // --- 居中 (3) ---
+            else if (SensorStatus == 0xE7) // 0b 1110 0111 (中间2个探头压线)
+            {
+                Serial_SendByte(31);
+            }
+            else if (SensorStatus == 0xEF) // 0b 1110 1111 (中间偏左1个探头压线)
+            {
+                Serial_SendByte(32);
+            }
+            else if (SensorStatus == 0xF7) // 0b 1111 0111 (中间偏右1个探头压线)
+            {
+                Serial_SendByte(33);
+            }
+
+            // --- 偏右侧 (4, 5) ---
+            else if (SensorStatus == 0xF3) // 0b 1111 0011 (右侧2个探头压线)
+            {
+                Serial_SendByte(41);
+            }
+            else if (SensorStatus == 0xFB) // 0b 1111 1011 (右侧偏内1个探头压线)
+            {
+                Serial_SendByte(42);
+            }
+            else if (SensorStatus == 0xF9) // 0b 1111 1001 (右侧偏外2个探头压线)
+            {
+                Serial_SendByte(43);
+            }
+            else if (SensorStatus == 0xFD) // 0b 1111 1101 (最右侧第2个探头压线)
+            {
+                Serial_SendByte(51);
+            }
+            else if (SensorStatus == 0xFC) // 0b 1111 1100 (最右侧边缘2个探头压线)
+            {
+                Serial_SendByte(52);
+            }
+            else if (SensorStatus == 0xFE) // 0b 1111 1110 (最右侧单探头压线)
+            {
+                Serial_SendByte(53);
+            }
+
+            // --- 偏左侧 (6, 7) ---
+            else if (SensorStatus == 0xCF) // 0b 1100 1111 (左侧2个探头压线)
+            {
+                Serial_SendByte(61);
+            }
+            else if (SensorStatus == 0xDF) // 0b 1101 1111 (左侧偏内1个探头压线)
+            {
+                Serial_SendByte(62);
+            }
+            else if (SensorStatus == 0x9F) // 0b 1001 1111 (左侧偏外2个探头压线)
+            {
+                Serial_SendByte(63);
+            }
+            else if (SensorStatus == 0xBF) // 0b 1011 1111 (最左侧第2个探头压线)
+            {
+                Serial_SendByte(71);
+            }
+            else if (SensorStatus == 0x3F) // 0b 0011 1111 (最左侧边缘2个探头压线)
+            {
+                Serial_SendByte(72);
+            }
+            else if (SensorStatus == 0x7F) // 0b 0111 1111 (最左侧单探头压线)
+            {
+                Serial_SendByte(73);
+            }
+
+            // --- 异常状态 ---
+            else if (SensorStatus == 0xFF) // 0b 1111 1111 (纯白，全丢线)
+            {
+                Serial_SendByte(2);
+            }
+            else if (SensorStatus == 0x00) // 0b 0000 0000 (纯黑，或者路口中心)
+            {
+                Serial_SendByte(1);
+            }
+#pragma endregion
+        }
+        else if (if_return_freight_location == 1)
+        {
+            if (dist2 <= 300 && dist2 >= 0) //货站在右边
+            {
+                Serial_SendByte(85);
+            }
+            else if (dist2 >= 486)
+            {
+                Serial_SendByte(87);
+            }
+        }
     }
 }
 
@@ -267,6 +289,11 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
         if (RxCmd == 86)
         {
             Trigger_Set_High(GPIOA, GPIO_Pin_12);
+            if_return_freight_location = 1;
+        }
+        else if (RxCmd == 87)
+        {
+            if_return_freight_location = 0;
         }
     }
 }

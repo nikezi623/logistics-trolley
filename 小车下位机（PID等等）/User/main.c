@@ -361,6 +361,10 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					{
 						PWMMax = 26;
 					}
+					else if(send_item_flag == 1)
+					{
+						PWMMax = 26;
+					}
 					// PWM 限幅
 					if (LeftPWM >= PWMMax)
 						LeftPWM = PWMMax;
@@ -487,20 +491,35 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				SpeedPID.Target = 0;
 				Serial_SendByte(86);
 
-				if (DelayCount_send_item >= 2000)
+				if (DelayCount_send_item >= 886 && RxCmd == 85) // 货站在右边
 				{
 					DelayCount_send_item = 0;
-					send_item_flag = 0;
+					Base_Yaw = 0;
 					all_black_flag = 3;
-					SpeedPID.Target = 3.86;
-					Base_Yaw = 83;
+				}
+				else if (DelayCount_send_item >= 886 && RxCmd == 87) // 货站在左边
+				{
+					DelayCount_send_item = 0;
+					Base_Yaw = 166;
+					all_black_flag = 3;
 				}
 			}
-			else if (RxCmd == 2 && all_black_flag == 3)
+			else if (all_black_flag == 3 && DelayCount_send_item >= 1186)
+			{
+				DelayCount_send_item = 0;
+				Base_Yaw = 83;
 				all_black_flag = 4;
+			}
+			else if (all_black_flag == 4 && DelayCount_send_item >= 886)
+			{
+				send_item_flag = 0;
+				SpeedPID.Target = 3.86;
+				all_black_flag = 5;
+				Serial_SendByte(87);
+			}
 			else if ((RxCmd == 1 || RxCmd == 81 || RxCmd == 91 || RxCmd == 82 ||
 					  RxCmd == 92 || RxCmd == 83 || RxCmd == 93) &&
-					 all_black_flag == 4) // 等待终点
+					 all_black_flag == 5) // 等待终点
 				RunFlag = 0;
 #pragma endregion
 
