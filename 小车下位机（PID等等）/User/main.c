@@ -490,14 +490,15 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				DelayCount_avoid = 0;
 				SpeedPID.Target = 1.86; // 慢速直线绕开圆柱
 				avoid_flag = 3;
+				Total_Distance = 0;
 			}
-			else if (avoid_flag == 3 && DelayCount_avoid >= 1888) // 斜向直行的时间（根据实际距离调）
+			else if (avoid_flag == 3 && Total_Distance >= 270) // 斜向直行的时间（根据实际距离调）
 			{
-				DelayCount_avoid = 0;
 				SpeedPID.Target = 0; // 再次停车准备转向
 				// 车头指向赛道：+45度减去90度 = -45度
 				Base_Yaw = avoid_original_yaw - 38.0f;
 				avoid_flag = 4;
+				DelayCount_avoid = 0;
 			}
 			else if (avoid_flag == 4 && DelayCount_avoid >= 850) // 等待车头转好
 			{
@@ -552,7 +553,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				Total_Distance = 0;
 				SpeedPID.Target = MIN_SPEED;
 			}
-			else if (Total_Distance >= 80 && all_black_flag == 4) // 先判断是不是开够了 200mm
+			else if (Total_Distance >= 66 && all_black_flag == 4) // 先判断是不是开够了 200mm
 			{
 				Total_Distance = 0;	 // 距离达标，先清零
 				SpeedPID.Target = 0; // 建议先停车，防止跑过头
@@ -570,12 +571,12 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					all_black_flag = 5;
 				}
 			}
-			else if (all_black_flag == 5 && DelayCount_send_item >= 1186)
+			else if (all_black_flag == 5 && DelayCount_send_item >= 886)
 			{
 				DelayCount_send_item = 0;
 				// Base_Yaw = 83;
-				SpeedPID.Target = MIN_SPEED * -1;
 				Total_Distance = 0;
+				SpeedPID.Target = MIN_SPEED * -1;
 				all_black_flag = 6;
 			}
 			else if (all_black_flag == 6 && fabs(Total_Distance) >= 200) //可能调参
@@ -589,7 +590,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				Serial_SendByte(87);
 				DelayCount_send_item = 0;
 			}
-			else if (all_black_flag == 7 && DelayCount_send_item >= 886)
+			else if (all_black_flag == 7 && DelayCount_send_item >= 500)
 			{
 				Total_Distance = 0;
 				SpeedPID.Target = MIN_SPEED;
@@ -598,18 +599,25 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 			else if (all_black_flag == 8 && Total_Distance >= 190) //可能调参
 			{
 				SpeedPID.Target = 0;
-				Base_Yaw = 83;
+				// Base_Yaw = 83;
 				all_black_flag = 9;
 				DelayCount_send_item = 0;
 			}
-			else if (all_black_flag == 9 && DelayCount_send_item == 886)
+			else if (all_black_flag == 9 && DelayCount_send_item >= 400)
 			{
+				Base_Yaw = 83;
 				all_black_flag = 10;
+				DelayCount_send_item = 0;
+			}
+			else if (all_black_flag == 10 && DelayCount_send_item >= 886)
+			{
+				send_item_flag = 0;
 				SpeedPID.Target = 3.86;
+				all_black_flag = 11;
 			}
 			else if ((RxCmd == 1 || RxCmd == 81 || RxCmd == 91 || RxCmd == 82 ||
 					  RxCmd == 92 || RxCmd == 83 || RxCmd == 93) &&
-					 all_black_flag == 10) // 等待终点
+					 all_black_flag == 11) // 等待终点
 				RunFlag = 0;
 #pragma endregion
 
@@ -664,6 +672,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				line_end_fine_flag = 1;
 				Base_Yaw = 83;
 				is_startup_flag = 1;
+				ConFlag = 3;
 			}
 
 			// --- 4. 捕捉进入避障 ---
