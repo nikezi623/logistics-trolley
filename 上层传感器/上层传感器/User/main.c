@@ -110,7 +110,7 @@ int main(void)
             }
 
             // 分数达到 4 分（相当于看到两次），才确认有障碍物
-            if (avoid_count >= 2)
+            if (avoid_count >= 3)
             {
                 Obstacle_Flag = 1;
             }

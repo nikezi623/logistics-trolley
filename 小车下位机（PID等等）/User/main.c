@@ -1,20 +1,20 @@
 #include "PHC_HeadFile.h"
 
 #pragma region 调参区
-#define BASE_SPEED 2.56 // 基础直道速度
-#define MIN_SPEED 0.6	// 弯道最低速度
+#define BASE_SPEED 1.86 // 基础直道速度
+#define MIN_SPEED 1.00	// 弯道最低速度
 
-float VISION_KP = 1.05; // 转向环灵敏度增益
+float VISION_KP = 1.00; // 转向环灵敏度增益
 float VISION_KI = 0;	// 视觉误差积分系数 (从0慢慢调)
-float VISION_KD = 0.5;	// 视觉误差微分系数
+float VISION_KD = 3.68; // 视觉误差微分系数
 
-float SPEED_DROP_K = 8.86; // 弯道减速系数
+float SPEED_DROP_K = 6.68; // 弯道减速系数
 
 // 速度环PID
 PID_t SpeedPID = {
-	.Kp = 4.00,
+	.Kp = 5.50,
 	.Ki = 0.66,
-	.Kd = 0.00,
+	.Kd = 1.00,
 	.OutMax = 100,
 	.OutMin = -100,
 	.ErrorIntMax = 150,
@@ -23,9 +23,9 @@ PID_t SpeedPID = {
 
 // 视觉转向环PID
 PID_t TurnPID_Vision = {
-	.Kp = 5.86,
-	.Ki = 1.50,
-	.Kd = 2.86,
+	.Kp = 7.00,
+	.Ki = 0.80,
+	.Kd = 5.00,
 	.OutMax = 100,
 	.OutMin = -100,
 	.ErrorIntMax = 20,
@@ -34,9 +34,9 @@ PID_t TurnPID_Vision = {
 
 // 陀螺仪转向环PID
 PID_t TurnPID_Gyro = {
-	.Kp = 5.86,
+	.Kp = 5.00,
 	.Ki = 0.5,
-	.Kd = 1.86,
+	.Kd = 3.00,
 	.OutMax = 100,
 	.OutMin = -100,
 	.ErrorIntMax = 20,
@@ -82,7 +82,7 @@ float real_gz = 0;
 float Base_Yaw = 0.0f;					// 当前行驶的基准方向
 static float avoid_original_yaw = 0.0f; // 记录避障前的原始偏航角
 float Vision_Derivative = 0;
-#pragma endregion						// 结束折叠区
+#pragma endregion // 结束折叠区
 
 void Show_parameter(void) // 参数显示函数
 {
