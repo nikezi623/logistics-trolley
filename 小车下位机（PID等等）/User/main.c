@@ -4,9 +4,9 @@
 #define BASE_SPEED 1.86 // 基础直道速度
 #define MIN_SPEED 1.00	// 弯道最低速度
 
-float VISION_KP = 0.80;	   // 转向环灵敏度增益
+float VISION_KP = 1.68;	   // 转向环灵敏度增益
 float VISION_KI = 0;	   // 视觉误差积分系数 (从0慢慢调)
-float VISION_KD = 6.00;	   // 视觉误差微分系数
+float VISION_KD = 7.00;	   // 视觉误差微分系数
 float SPEED_DROP_K = 6.68; // 弯道减速系数
 
 // 速度环PID
@@ -22,8 +22,8 @@ PID_t SpeedPID = {
 
 // 视觉转向环PID
 PID_t TurnPID_Vision = {
-	.Kp = 6.00,
-	.Ki = 0.80,
+	.Kp = 8.50,
+	.Ki = 0.00,
 	.Kd = 5.50,
 	.OutMax = 100,
 	.OutMin = -100,
@@ -204,7 +204,7 @@ int main(void)
 				}
 				else if (right_angle_turn_flag == 3)
 				{
-					Base_Yaw = 83;
+					Base_Yaw = -83;
 					right_angle_turn_flag = 4;
 					DelayCount_right_turn = 0;
 				}
@@ -408,13 +408,13 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 
 					// 判断车轮的整体活跃度 (把左右轮速度绝对值加起来)
 					// 如果速度极低，说明车子在转向时被卡住了（处于静摩擦状态）
-					if (fabs(LeftSpeed) < 0.20 && fabs(RightSpeed) < 0.20)
+					if (fabs(LeftSpeed) < 0.13 && fabs(RightSpeed) < 0.13)
 					{
-						friction_offset = 18; // 静摩擦补偿大，用力“踹”一脚打破死区
+						friction_offset = 16; // 静摩擦补偿大，用力“踹”一脚打破死区
 					}
 					else
 					{
-						friction_offset = 9; // 动摩擦补偿小，动起来后只需轻轻推着走
+						friction_offset = 3; // 动摩擦补偿小，动起来后只需轻轻推着走
 					}
 
 					// 将动态计算出的补偿值，叠加到差速输出上
@@ -537,41 +537,54 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 #pragma region 全黑任务状态机
 			if ((RxCmd == 1 || line_end_fine_flag == 1) && (all_black_flag == 2)) // 全黑且巡线结束（货站）
 			{
+				DelayCount_send_item = 0;
 				send_item_flag = 1;
 				is_startup_flag = 1;
 				Base_Yaw = 83;
 				SpeedPID.Target = 0;
+			}
+			else if (DelayCount_send_item >= 886 && all_black_flag == 2)
+			{
 				Serial_SendByte(86);
+				DelayCount_send_item = 0;
+				all_black_flag = 3;
+				Total_Distance = 0;
+				SpeedPID.Target = MIN_SPEED;
+			}
+			else if (Total_Distance >= 100 && all_black_flag == 3) // 先判断是不是开够了 200mm
+			{
+				Total_Distance = 0;	 // 距离达标，先清零
+				SpeedPID.Target = 0; // 建议先停车，防止跑过头
 
-				if (DelayCount_send_item >= 886 && RxCmd == 85) // 货站在右边
-				{
-					DelayCount_send_item = 0;
-					Base_Yaw = 0;
-					all_black_flag = 3;
-				}
-				else if (DelayCount_send_item >= 886 && RxCmd == 87) // 货站在左边
+				if (RxCmd == 85) // 此时如果看到了右边货站
 				{
 					DelayCount_send_item = 0;
 					Base_Yaw = 166;
-					all_black_flag = 3;
+					all_black_flag = 4;
+				}
+				else if (RxCmd == 87) // 此时如果看到了左边货站
+				{
+					DelayCount_send_item = 0;
+					Base_Yaw = 0;
+					all_black_flag = 4;
 				}
 			}
-			else if (all_black_flag == 3 && DelayCount_send_item >= 1186)
+			else if (all_black_flag == 4 && DelayCount_send_item >= 1186) // 先用延时1186ms代替投放货物
 			{
 				DelayCount_send_item = 0;
 				Base_Yaw = 83;
-				all_black_flag = 4;
+				all_black_flag = 5;
 			}
-			else if (all_black_flag == 4 && DelayCount_send_item >= 886)
+			else if (all_black_flag == 5 && DelayCount_send_item >= 886)
 			{
 				send_item_flag = 0;
 				SpeedPID.Target = 3.86;
-				all_black_flag = 5;
+				all_black_flag = 6;
 				Serial_SendByte(87);
 			}
 			else if ((RxCmd == 1 || RxCmd == 81 || RxCmd == 91 || RxCmd == 82 ||
 					  RxCmd == 92 || RxCmd == 83 || RxCmd == 93) &&
-					 all_black_flag == 5) // 等待终点
+					 all_black_flag == 6) // 等待终点
 				RunFlag = 0;
 #pragma endregion
 
@@ -583,8 +596,8 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 			{
 				if (RxCmd == 81 || RxCmd == 82 || RxCmd == 83)
 				{
-					right_turn_filter_count++;	// 右转信号累计
-					left_turn_filter_count = 0; // 互斥清零：有右转信号就不可能是左转
+					right_turn_filter_count++;		  // 右转信号累计
+					left_turn_filter_count = 0;		  // 互斥清零：有右转信号就不可能是左转
 					if (right_turn_filter_count >= 5) // 连续维持 5ms 以上
 					{
 						ConFlag = 1;
@@ -600,8 +613,8 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				}
 				else if (RxCmd == 91 || RxCmd == 92 || RxCmd == 93)
 				{
-					left_turn_filter_count++;	 // 左转信号累计
-					right_turn_filter_count = 0; // 互斥清零
+					left_turn_filter_count++;		 // 左转信号累计
+					right_turn_filter_count = 0;	 // 互斥清零
 					if (left_turn_filter_count >= 5) // 连续维持 5ms 以上
 					{
 						ConFlag = 2;
