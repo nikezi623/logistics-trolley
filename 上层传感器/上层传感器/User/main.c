@@ -288,12 +288,12 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 
         if (RxCmd == 86)
         {
-            Trigger_Set_High(GPIOA, GPIO_Pin_12);
             if_return_freight_location = 1;
         }
         else if (RxCmd == 87)
         {
             if_return_freight_location = 0;
+            Trigger_Set_High(GPIOA, GPIO_Pin_12);
         }
     }
 }

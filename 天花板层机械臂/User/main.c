@@ -10,19 +10,25 @@ int main(void)
 
     Trigger_Top_Init();
 
-    /* 2. 上电复位：让四个舵机先缓慢回到中位 (90度 -> 对应 1500us) */ //20000
-    Servo_Control(1, 2650); //底盘初始位置
-    Servo_Control(2, 1850); //短臂初始位置
-    Servo_Control(3, 500); //长臂初始位置
-    Servo_Control(4, 1500); //夹爪初始位置，1800的夹取是合适的
-    Delay_ms(1000); // 等待舵机走到位
+    /* 2. 上电复位：让四个舵机先缓慢回到中位 (90度 -> 对应 1500us) */ // 20000
+    Servo_Control(1, 2500);                                           // 底盘初始位置2650
+    Servo_Control(2, 1850);                                           // 短臂初始位置1850
+    Servo_Control(3, 400);                                            // 长臂初始位置500
+    Servo_Control(4, 1600);                                           // 夹爪初始位置，1800的夹取是合适的1500
+    Delay_ms(1000);                                                   // 等待舵机走到位
 
-    // Trigger_Set_Low(GPIOA, GPIO_Pin_12);
     while (1)
     {
         if (Trigger_Read_Pin(GPIOA, GPIO_Pin_12) == 1 && flag == 0)
         {
             flag++;
+            Servo_Control(2, 2500);
+            Delay_ms(500);
+            Servo_Control(1, 1500);
+            Delay_ms(500);
+            Servo_Control(3, 650);
+            Delay_ms(500);
+            Servo_Control(4, 1300);
 
             // 抓取结束，通知下层
             Trigger_Set_High(GPIOA, GPIO_Pin_15);

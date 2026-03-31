@@ -583,21 +583,26 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					SpeedPID.Target = MIN_SPEED * -1;
 					all_black_flag = 6;
 				}
-				else if (all_black_flag == 6 && fabs(Total_Distance) >= 220)
+				else if (all_black_flag == 6 && fabs(Total_Distance) >= 300)
 				{
 					SpeedPID.Target = 0;
 					Total_Distance = 0;
-					all_black_flag = 7;
 					Serial_SendByte(87);
+					all_black_flag = 7;
 					DelayCount_send_item = 0;
 				}
-				else if (all_black_flag == 7 && DelayCount_send_item >= 500) // 这步要投放货物
+				// else if (Trigger_Read_Pin(GPIOA, GPIO_Pin_15) == 1)
+				// {
+				// 	all_black_flag = 7;
+				// 	DelayCount_send_item = 0;
+				// }
+				else if (all_black_flag == 7 && DelayCount_send_item >= 1800) // 这步要投放货物
 				{
 					Total_Distance = 0;
 					SpeedPID.Target = MIN_SPEED;
 					all_black_flag = 8;
 				}
-				else if (all_black_flag == 8 && Total_Distance >= 190) // 可能调参
+				else if (all_black_flag == 8 && Total_Distance >= 240) // 可能调参
 				{
 					SpeedPID.Target = 0;
 					// Base_Yaw = 83;
@@ -623,7 +628,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					Serial_SendByte(87);
 					DelayCount_send_item = 0;
 				}
-				else if (all_black_flag == 7 && DelayCount_send_item >= 500) // 这步要投放货物
+				else if (all_black_flag == 7 && DelayCount_send_item >= 1800) // 这步要投放货物
 				{
 					Total_Distance = 0;
 					SpeedPID.Target = MIN_SPEED;
@@ -632,7 +637,6 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				else if (all_black_flag == 8 && Total_Distance >= 160) // 可能调参
 				{
 					SpeedPID.Target = 0;
-					// Base_Yaw = 83;
 					all_black_flag = 9;
 					DelayCount_send_item = 0;
 					frieght_left_or_right = 3;
@@ -666,7 +670,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				{
 					right_turn_filter_count++;		  // 右转信号累计
 					left_turn_filter_count = 0;		  // 互斥清零：有右转信号就不可能是左转
-					if (right_turn_filter_count >= 5) // 连续维持 5ms 以上
+					if (right_turn_filter_count >= 8) // 连续维持 5ms 以上
 					{
 						ConFlag = 1;
 						is_startup_flag = 1;
@@ -683,7 +687,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				{
 					left_turn_filter_count++;		 // 左转信号累计
 					right_turn_filter_count = 0;	 // 互斥清零
-					if (left_turn_filter_count >= 5) // 连续维持 5ms 以上
+					if (left_turn_filter_count >= 8) // 连续维持 5ms 以上
 					{
 						ConFlag = 2;
 						is_startup_flag = 1;
