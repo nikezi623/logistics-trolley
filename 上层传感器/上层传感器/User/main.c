@@ -11,7 +11,7 @@ uint16_t time_count;
 uint8_t RxCmd;
 
 // --- 避障与测距相关参数 ---
-uint8_t avoid_count = 0;   // 连续检测到障碍物的次数
+int8_t avoid_count = 0;   // 连续检测到障碍物的次数
 uint8_t Obstacle_Flag = 0; // 确认为真实障碍物的标志位
 int16_t dist1 = 0;         // D1 激光测距传感器过滤后数据
 int16_t dist2 = 0;         // D2 激光测距传感器过滤后数据
@@ -110,7 +110,7 @@ int main(void)
             }
 
             // 分数达到 4 分（相当于看到两次），才确认有障碍物
-            if (avoid_count >= 3)
+            if (avoid_count >= 4)
             {
                 Obstacle_Flag = 1;
             }

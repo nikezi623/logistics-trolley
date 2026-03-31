@@ -12,7 +12,7 @@ float SPEED_DROP_K = 6.68; // 弯道减速系数
 
 // 速度环PID
 PID_t SpeedPID = {
-	.Kp = 5.50,
+	.Kp = 6.50,
 	.Ki = 0.66,
 	.Kd = 1.00,
 	.OutMax = 100,
@@ -23,7 +23,7 @@ PID_t SpeedPID = {
 
 // 视觉转向环PID
 PID_t TurnPID_Vision = {
-	.Kp = 7.00,
+	.Kp = 8.00,
 	.Ki = 0.80,
 	.Kd = 5.00,
 	.OutMax = 100,
@@ -221,7 +221,7 @@ int main(void)
 					SpeedPID.Target = MIN_SPEED;
 					right_angle_turn_flag = 2;
 				}
-				else if (right_angle_turn_flag == 2 && DelayCount_right_turn >= 1886)
+				else if (right_angle_turn_flag == 2 && DelayCount_right_turn >= 1666)
 				{
 					SpeedPID.Target = 0;
 					DelayCount_right_turn = 0;
@@ -382,6 +382,13 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					PID_Update(&TurnPID_Vision);
 					DifPWM = TurnPID_Vision.Out; // 视觉闭环输出
 
+					// 【新增：重车转向死区补偿】
+					// 如果视觉要求转向，且差速太小推不动重车，强制给一个最小突破力
+					if (DifPWM > 2 && DifPWM < 19)
+						DifPWM = 19;
+					else if (DifPWM < -2 && DifPWM > -19)
+						DifPWM = -19;
+
 					LeftPWM = AvgPWM + DifPWM / 2;
 					RightPWM = AvgPWM - DifPWM / 2;
 
@@ -434,21 +441,21 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				avoid_flag = 2;
 				DelayCount_avoid = 0;
 			}
-			else if (avoid_flag == 2 && DelayCount_avoid >= 1000) // 1秒足够原地转45度了
+			else if (avoid_flag == 2 && DelayCount_avoid >= 850) // 1秒足够原地转45度了
 			{
 				DelayCount_avoid = 0;
-				SpeedPID.Target = 2.86; // 慢速直线绕开圆柱
+				SpeedPID.Target = 1.86; // 慢速直线绕开圆柱
 				avoid_flag = 3;
 			}
-			else if (avoid_flag == 3 && DelayCount_avoid >= 1886) // 斜向直行的时间（根据实际距离调）
+			else if (avoid_flag == 3 && DelayCount_avoid >= 1888) // 斜向直行的时间（根据实际距离调）
 			{
 				DelayCount_avoid = 0;
 				SpeedPID.Target = 0; // 再次停车准备转向
 				// 车头指向赛道：+45度减去90度 = -45度
-				Base_Yaw = avoid_original_yaw - 40.0f;
+				Base_Yaw = avoid_original_yaw - 38.6f;
 				avoid_flag = 4;
 			}
-			else if (avoid_flag == 4 && DelayCount_avoid >= 1000) // 等待车头转好
+			else if (avoid_flag == 4 && DelayCount_avoid >= 850) // 等待车头转好
 			{
 				DelayCount_avoid = 0;
 				SpeedPID.Target = 1.86; // 慢速往回开，主动去“撞”黑线
@@ -459,7 +466,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 			else if (avoid_flag == 5 && RxCmd != 2)
 			{
 				DelayCount_avoid = 0;
-				SpeedPID.Target = 1.6; // 压线的瞬间，立刻刹车！
+				SpeedPID.Target = 0.96; // 压线的瞬间，立刻刹车！
 
 				// 不要急着把控制权给视觉！
 				// 用陀螺仪把车头掰回避障前的方向（完美平行于黑线）
