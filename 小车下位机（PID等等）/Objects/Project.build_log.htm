@@ -27,7 +27,37 @@ Project File Date:  03/27/2026
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'D:\K32\ARM\ARMCC\Bin'
 Build target 'Target 1'
-".\Objects\Project.axf" - 0 Error(s), 0 Warning(s).
+compiling main.c...
+User\main.c(3): warning:  #161-D: unrecognized #pragma
+  #pragma region 调参�?
+User\main.c(45): warning:  #161-D: unrecognized #pragma
+  #pragma endregion
+User\main.c(47): warning:  #161-D: unrecognized #pragma
+  #pragma region 系统状态与标志位与上层信息参数定义
+User\main.c(69): warning:  #161-D: unrecognized #pragma
+  #pragma endregion
+User\main.c(71): warning:  #161-D: unrecognized #pragma
+  #pragma region 其他参数定义
+User\main.c(85): warning:  #161-D: unrecognized #pragma
+  #pragma endregion // 结束折叠�?
+User\main.c(128): warning:  #223-D: function "Trigger_Lower_Init" declared implicitly
+  	Trigger_Lower_Init();
+User\main.c(418): warning:  #161-D: unrecognized #pragma
+  #pragma region 陀螺仪数据处理
+User\main.c(426): warning:  #161-D: unrecognized #pragma
+  #pragma endregion
+User\main.c(493): warning:  #161-D: unrecognized #pragma
+  #pragma region 全黑任务状态机
+User\main.c(532): warning:  #161-D: unrecognized #pragma
+  #pragma endregion
+User\main.c(534): warning:  #161-D: unrecognized #pragma
+  #pragma region 直角弯|货站检测|避障触发�?
+User\main.c(600): warning:  #161-D: unrecognized #pragma
+  #pragma endregion
+User\main.c: 13 warnings, 0 errors
+linking...
+Program Size: Code=22282 RO-data=3190 RW-data=336 ZI-data=2760  
+".\Objects\Project.axf" - 0 Error(s), 13 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -41,7 +71,7 @@ Package Vendor: Keil
   D:\K32\ARM\PACK\Keil\STM32F1xx_DFP\2.4.1\Device\Include
 
 <h2>Collection of Component Files used:</h2>
-Build Time Elapsed:  00:00:00
+Build Time Elapsed:  00:00:01
 </pre>
 </body>
 </html>

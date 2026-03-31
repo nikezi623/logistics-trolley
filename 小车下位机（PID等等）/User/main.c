@@ -25,7 +25,7 @@ PID_t SpeedPID = {
 PID_t TurnPID_Vision = {
 	.Kp = 8.00,
 	.Ki = 0.80,
-	.Kd = 5.00,
+	.Kd = 5.50,
 	.OutMax = 100,
 	.OutMin = -100,
 	.ErrorIntMax = 20,
@@ -221,7 +221,7 @@ int main(void)
 					SpeedPID.Target = MIN_SPEED;
 					right_angle_turn_flag = 2;
 				}
-				else if (right_angle_turn_flag == 2 && DelayCount_right_turn >= 1666)
+				else if (right_angle_turn_flag == 2 && DelayCount_right_turn >= 1650)
 				{
 					SpeedPID.Target = 0;
 					DelayCount_right_turn = 0;
@@ -452,13 +452,13 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				DelayCount_avoid = 0;
 				SpeedPID.Target = 0; // 再次停车准备转向
 				// 车头指向赛道：+45度减去90度 = -45度
-				Base_Yaw = avoid_original_yaw - 38.6f;
+				Base_Yaw = avoid_original_yaw - 38.0f;
 				avoid_flag = 4;
 			}
 			else if (avoid_flag == 4 && DelayCount_avoid >= 850) // 等待车头转好
 			{
 				DelayCount_avoid = 0;
-				SpeedPID.Target = 1.86; // 慢速往回开，主动去“撞”黑线
+				SpeedPID.Target = 1.46; // 慢速往回开，主动去“撞”黑线
 				avoid_flag = 5;
 			}
 			// ⚠️ 核心修改：斜角效应解法
@@ -470,7 +470,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 
 				// 不要急着把控制权给视觉！
 				// 用陀螺仪把车头掰回避障前的方向（完美平行于黑线）
-				Base_Yaw = avoid_original_yaw - 25;
+				Base_Yaw = avoid_original_yaw - 10;
 				avoid_flag = 6;
 			}
 			else if (avoid_flag == 6 && DelayCount_avoid >= 1000) // 给800ms让车头在黑线上原地转正
@@ -532,27 +532,49 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 #pragma endregion
 
 #pragma region 直角弯|货站检测|避障触发器
+			static uint8_t right_turn_filter_count = 0;
+			static uint8_t left_turn_filter_count = 0;
+
 			if (ConFlag == 0 && have_turned_flag == 0) // 正常巡线状态+还未转直角弯
 			{
 				if (RxCmd == 81 || RxCmd == 82 || RxCmd == 83)
 				{
-					ConFlag = 1;
-					is_startup_flag = 1;
-					have_turned_flag = 1;
-					right_angle_turn_flag = 1;
-					PID_Init(&SpeedPID);
-					PID_Init(&TurnPID_Vision);
-					PID_Init(&TurnPID_Gyro);
+					right_turn_filter_count++;		  // 右转信号累计
+					left_turn_filter_count = 0;		  // 互斥清零：有右转信号就不可能是左转
+					if (right_turn_filter_count >= 5) // 连续维持 5ms 以上
+					{
+						ConFlag = 1;
+						is_startup_flag = 1;
+						have_turned_flag = 1;
+						right_angle_turn_flag = 1;
+						PID_Init(&SpeedPID);
+						PID_Init(&TurnPID_Vision);
+						PID_Init(&TurnPID_Gyro);
+
+						right_turn_filter_count = 0;
+					}
 				}
 				else if (RxCmd == 91 || RxCmd == 92 || RxCmd == 93)
 				{
-					ConFlag = 2;
-					is_startup_flag = 1;
-					have_turned_flag = 1;
-					right_angle_turn_flag = 1;
-					PID_Init(&SpeedPID);
-					PID_Init(&TurnPID_Vision);
-					PID_Init(&TurnPID_Gyro);
+					left_turn_filter_count++;	 // 左转信号累计
+					right_turn_filter_count = 0; // 互斥清零
+
+					if (left_turn_filter_count >= 5) // 连续维持 5ms 以上
+					{
+						ConFlag = 2;
+						is_startup_flag = 1;
+						have_turned_flag = 1;
+						right_angle_turn_flag = 1;
+						PID_Init(&SpeedPID);
+						PID_Init(&TurnPID_Vision);
+						PID_Init(&TurnPID_Gyro);
+						left_turn_filter_count = 0;
+					}
+				}
+				else
+				{
+					right_turn_filter_count = 0;
+					left_turn_filter_count = 0;
 				}
 			}
 			else if (ConFlag == 0 && (RxCmd == 1 || RxCmd == 81 || RxCmd == 91 || RxCmd == 82 || RxCmd == 92 || RxCmd == 83 || RxCmd == 93) && have_turned_flag == 1) // 检测到货站
