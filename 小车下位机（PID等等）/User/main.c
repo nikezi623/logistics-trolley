@@ -1,14 +1,14 @@
 #include "PHC_HeadFile.h"
 
 #pragma region 调参区
-#define BASE_SPEED 1.86 // 基础直道速度
-#define MIN_SPEED 1.00	// 弯道最低速度
+#define BASE_SPEED 2.56 // 基础直道速度
+#define MIN_SPEED 0.6	// 弯道最低速度
 
 float VISION_KP = 1.05; // 转向环灵敏度增益
 float VISION_KI = 0;	// 视觉误差积分系数 (从0慢慢调)
-float VISION_KD = 2.5;	// 视觉误差微分系数
+float VISION_KD = 0.5;	// 视觉误差微分系数
 
-float SPEED_DROP_K = 5.5; // 弯道减速系数
+float SPEED_DROP_K = 8.86; // 弯道减速系数
 
 // 速度环PID
 PID_t SpeedPID = {
@@ -23,9 +23,9 @@ PID_t SpeedPID = {
 
 // 视觉转向环PID
 PID_t TurnPID_Vision = {
-	.Kp = 6.00,
-	.Ki = 0.80,
-	.Kd = 4.00,
+	.Kp = 5.86,
+	.Ki = 1.50,
+	.Kd = 2.86,
 	.OutMax = 100,
 	.OutMin = -100,
 	.ErrorIntMax = 20,
@@ -34,7 +34,7 @@ PID_t TurnPID_Vision = {
 
 // 陀螺仪转向环PID
 PID_t TurnPID_Gyro = {
-	.Kp = 3.86,
+	.Kp = 5.86,
 	.Ki = 0.5,
 	.Kd = 1.86,
 	.OutMax = 100,
@@ -81,6 +81,7 @@ float Target_YawAngle = 0.0f; // 视觉给出的目标角度
 float real_gz = 0;
 float Base_Yaw = 0.0f;					// 当前行驶的基准方向
 static float avoid_original_yaw = 0.0f; // 记录避障前的原始偏航角
+float Vision_Derivative = 0;
 #pragma endregion						// 结束折叠区
 
 void Show_parameter(void) // 参数显示函数
@@ -220,7 +221,7 @@ int main(void)
 					SpeedPID.Target = MIN_SPEED;
 					right_angle_turn_flag = 2;
 				}
-				else if (right_angle_turn_flag == 2 && DelayCount_right_turn >= 1186)
+				else if (right_angle_turn_flag == 2 && DelayCount_right_turn >= 786)
 				{
 					SpeedPID.Target = 0;
 					DelayCount_right_turn = 0;
@@ -274,10 +275,6 @@ int main(void)
 						if (Vision_Error_Integral < -100)
 							Vision_Error_Integral = -100;
 
-						// 计算 D (微分)
-						float Vision_Derivative = Vision_Error - Last_Vision_Error;
-						Last_Vision_Error = Vision_Error;
-
 						// 计算速度目标值 (根据偏差减速)
 						double expected_speed = BASE_SPEED - (SPEED_DROP_K * fabs(Vision_Error));
 						if (expected_speed < MIN_SPEED)
@@ -310,6 +307,10 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 		{
 			RxCmd = Serial_GetRxData();
 		}
+
+		// 计算 D (微分)
+		Vision_Derivative = Vision_Error - Last_Vision_Error;
+		Last_Vision_Error = Vision_Error;
 
 		// 定时器|延时部分
 		CountSpeedTurn++;		 // 速度转向环刷新计时器
@@ -356,14 +357,14 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					LeftPWM = AvgPWM + DifPWM / 2;
 					RightPWM = AvgPWM - DifPWM / 2;
 
-					int16_t PWMMax = 33;
+					int16_t PWMMax = 40;
 					if (ConFlag == 1 || ConFlag == 2)
 					{
-						PWMMax = 26;
+						PWMMax = 46;
 					}
-					else if(send_item_flag == 1)
+					else if (send_item_flag == 1)
 					{
-						PWMMax = 26;
+						PWMMax = 46;
 					}
 					// PWM 限幅
 					if (LeftPWM >= PWMMax)
@@ -433,13 +434,13 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				avoid_flag = 2;
 				DelayCount_avoid = 0;
 			}
-			else if (avoid_flag == 2 && DelayCount_avoid >= 850) // 1秒足够原地转45度了
+			else if (avoid_flag == 2 && DelayCount_avoid >= 1000) // 1秒足够原地转45度了
 			{
 				DelayCount_avoid = 0;
-				SpeedPID.Target = 1.86; // 慢速直线绕开圆柱
+				SpeedPID.Target = 2.86; // 慢速直线绕开圆柱
 				avoid_flag = 3;
 			}
-			else if (avoid_flag == 3 && DelayCount_avoid >= 1886) // 斜向直行的时间（根据实际距离调）
+			else if (avoid_flag == 3 && DelayCount_avoid >= 1386) // 斜向直行的时间（根据实际距离调）
 			{
 				DelayCount_avoid = 0;
 				SpeedPID.Target = 0; // 再次停车准备转向
@@ -447,10 +448,10 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				Base_Yaw = avoid_original_yaw - 40.0f;
 				avoid_flag = 4;
 			}
-			else if (avoid_flag == 4 && DelayCount_avoid >= 850) // 等待车头转好
+			else if (avoid_flag == 4 && DelayCount_avoid >= 1000) // 等待车头转好
 			{
 				DelayCount_avoid = 0;
-				SpeedPID.Target = 0.86; // 慢速往回开，主动去“撞”黑线
+				SpeedPID.Target = 1.86; // 慢速往回开，主动去“撞”黑线
 				avoid_flag = 5;
 			}
 			// ⚠️ 核心修改：斜角效应解法
@@ -458,7 +459,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 			else if (avoid_flag == 5 && RxCmd != 2)
 			{
 				DelayCount_avoid = 0;
-				SpeedPID.Target = 0.6; // 压线的瞬间，立刻刹车！
+				SpeedPID.Target = 1.6; // 压线的瞬间，立刻刹车！
 
 				// 不要急着把控制权给视觉！
 				// 用陀螺仪把车头掰回避障前的方向（完美平行于黑线）
