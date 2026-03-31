@@ -221,7 +221,7 @@ int main(void)
 					SpeedPID.Target = MIN_SPEED;
 					right_angle_turn_flag = 2;
 				}
-				else if (right_angle_turn_flag == 2 && DelayCount_right_turn >= 786)
+				else if (right_angle_turn_flag == 2 && DelayCount_right_turn >= 1886)
 				{
 					SpeedPID.Target = 0;
 					DelayCount_right_turn = 0;
@@ -233,7 +233,7 @@ int main(void)
 					right_angle_turn_flag = 4;
 					DelayCount_right_turn = 0;
 				}
-				else if (right_angle_turn_flag == 4 && DelayCount_right_turn >= 786)
+				else if (right_angle_turn_flag == 4 && DelayCount_right_turn >= 800)
 				{
 					DelayCount_right_turn = 0;
 					PID_Init(&SpeedPID);
@@ -440,7 +440,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				SpeedPID.Target = 2.86; // 慢速直线绕开圆柱
 				avoid_flag = 3;
 			}
-			else if (avoid_flag == 3 && DelayCount_avoid >= 1386) // 斜向直行的时间（根据实际距离调）
+			else if (avoid_flag == 3 && DelayCount_avoid >= 1886) // 斜向直行的时间（根据实际距离调）
 			{
 				DelayCount_avoid = 0;
 				SpeedPID.Target = 0; // 再次停车准备转向
