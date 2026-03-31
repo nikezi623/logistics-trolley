@@ -54,13 +54,14 @@ uint16_t CountSpeedTurn = 0; // 速度转向环刷新计时器
 uint8_t all_black_flag = 0;		   // 全黑任务状态机阶段
 uint8_t send_item_flag = 0;		   // 投放货物触发标志
 uint16_t DelayCount_send_item = 0; // 投放货物计时器
-uint8_t have_turned_flag = 0;	   // 已经转过直角弯的标志位
 uint8_t line_end_fine_flag = 0;	   // 巡线结束标志位
+uint8_t frieght_left_or_right = 0; // 默认货站在右边（0）
 
 uint8_t have_avoid_flag = 0;   // 避障结束标志位
 uint8_t avoid_flag = 0;		   // 避障状态机
 uint16_t DelayCount_avoid = 0; // 避障计时器
 
+uint8_t have_turned_flag = 0;		// 已经转过直角弯的标志位
 uint8_t right_angle_turn_flag = 0;	// 直角弯状态机标志位
 uint16_t DelayCount_right_turn = 0; // 直角弯计时器
 
@@ -563,47 +564,81 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					DelayCount_send_item = 0;
 					Base_Yaw = 166;
 					all_black_flag = 5;
+					frieght_left_or_right = 0;
 				}
 				else if (RxCmd == 87) // 此时如果看到了左边货站
 				{
 					DelayCount_send_item = 0;
 					Base_Yaw = 0;
 					all_black_flag = 5;
+					frieght_left_or_right = 1;
 				}
 			}
-			else if (all_black_flag == 5 && DelayCount_send_item >= 886)
+			if (frieght_left_or_right == 0) // 货站在右边
 			{
-				DelayCount_send_item = 0;
-				// Base_Yaw = 83;
-				Total_Distance = 0;
-				SpeedPID.Target = MIN_SPEED * -1;
-				all_black_flag = 6;
+				if (DelayCount_send_item >= 886 && all_black_flag == 5)
+				{
+					DelayCount_send_item = 0;
+					Total_Distance = 0;
+					SpeedPID.Target = MIN_SPEED * -1;
+					all_black_flag = 6;
+				}
+				else if (all_black_flag == 6 && fabs(Total_Distance) >= 220)
+				{
+					SpeedPID.Target = 0;
+					Total_Distance = 0;
+					all_black_flag = 7;
+					Serial_SendByte(87);
+					DelayCount_send_item = 0;
+				}
+				else if (all_black_flag == 7 && DelayCount_send_item >= 500) // 这步要投放货物
+				{
+					Total_Distance = 0;
+					SpeedPID.Target = MIN_SPEED;
+					all_black_flag = 8;
+				}
+				else if (all_black_flag == 8 && Total_Distance >= 190) // 可能调参
+				{
+					SpeedPID.Target = 0;
+					// Base_Yaw = 83;
+					all_black_flag = 9;
+					DelayCount_send_item = 0;
+					frieght_left_or_right = 3;
+				}
 			}
-			else if (all_black_flag == 6 && fabs(Total_Distance) >= 200) //可能调参
+			else if (frieght_left_or_right == 1) // 货站在左边
 			{
-				SpeedPID.Target = 0;
-				Total_Distance = 0;
-				// 此处靠近货站，应该发送信息给天花板单片机使其投放
-				//  SpeedPID.Target = 3.86;
-				// send_item_flag = 0;
-				all_black_flag = 7;
-				Serial_SendByte(87);
-				DelayCount_send_item = 0;
+				if (DelayCount_send_item >= 886 && all_black_flag == 5)
+				{
+					DelayCount_send_item = 0;
+					Total_Distance = 0;
+					SpeedPID.Target = MIN_SPEED * -1;
+					all_black_flag = 6;
+				}
+				else if (all_black_flag == 6 && fabs(Total_Distance) >= 180)
+				{
+					SpeedPID.Target = 0;
+					Total_Distance = 0;
+					all_black_flag = 7;
+					Serial_SendByte(87);
+					DelayCount_send_item = 0;
+				}
+				else if (all_black_flag == 7 && DelayCount_send_item >= 500) // 这步要投放货物
+				{
+					Total_Distance = 0;
+					SpeedPID.Target = MIN_SPEED;
+					all_black_flag = 8;
+				}
+				else if (all_black_flag == 8 && Total_Distance >= 160) // 可能调参
+				{
+					SpeedPID.Target = 0;
+					// Base_Yaw = 83;
+					all_black_flag = 9;
+					DelayCount_send_item = 0;
+					frieght_left_or_right = 3;
+				}
 			}
-			else if (all_black_flag == 7 && DelayCount_send_item >= 500)
-			{
-				Total_Distance = 0;
-				SpeedPID.Target = MIN_SPEED;
-				all_black_flag = 8;
-			}
-			else if (all_black_flag == 8 && Total_Distance >= 190) //可能调参
-			{
-				SpeedPID.Target = 0;
-				// Base_Yaw = 83;
-				all_black_flag = 9;
-				DelayCount_send_item = 0;
-			}
-			else if (all_black_flag == 9 && DelayCount_send_item >= 400)
+			else if (all_black_flag == 9 && DelayCount_send_item >= 10)
 			{
 				Base_Yaw = 83;
 				all_black_flag = 10;
