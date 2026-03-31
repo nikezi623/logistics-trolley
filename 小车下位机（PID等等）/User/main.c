@@ -4,17 +4,16 @@
 #define BASE_SPEED 1.86 // 基础直道速度
 #define MIN_SPEED 1.00	// 弯道最低速度
 
-float VISION_KP = 1.05; // 转向环灵敏度增益
-float VISION_KI = 0;	// 视觉误差积分系数 (从0慢慢调)
-float VISION_KD = 2.5;	// 视觉误差微分系数
-
-float SPEED_DROP_K = 5.5; // 弯道减速系数
+float VISION_KP = 1.68;	   // 转向环灵敏度增益
+float VISION_KI = 0;	   // 视觉误差积分系数 (从0慢慢调)
+float VISION_KD = 7.00;	   // 视觉误差微分系数
+float SPEED_DROP_K = 6.68; // 弯道减速系数
 
 // 速度环PID
 PID_t SpeedPID = {
-	.Kp = 4.00,
+	.Kp = 6.50,
 	.Ki = 0.66,
-	.Kd = 0.00,
+	.Kd = 1.00,
 	.OutMax = 100,
 	.OutMin = -100,
 	.ErrorIntMax = 150,
@@ -23,9 +22,9 @@ PID_t SpeedPID = {
 
 // 视觉转向环PID
 PID_t TurnPID_Vision = {
-	.Kp = 6.00,
-	.Ki = 0.80,
-	.Kd = 4.00,
+	.Kp = 8.50,
+	.Ki = 0.00,
+	.Kd = 5.50,
 	.OutMax = 100,
 	.OutMin = -100,
 	.ErrorIntMax = 20,
@@ -34,9 +33,9 @@ PID_t TurnPID_Vision = {
 
 // 陀螺仪转向环PID
 PID_t TurnPID_Gyro = {
-	.Kp = 3.86,
+	.Kp = 5.00,
 	.Ki = 0.5,
-	.Kd = 1.86,
+	.Kd = 3.00,
 	.OutMax = 100,
 	.OutMin = -100,
 	.ErrorIntMax = 20,
@@ -55,13 +54,14 @@ uint16_t CountSpeedTurn = 0; // 速度转向环刷新计时器
 uint8_t all_black_flag = 0;		   // 全黑任务状态机阶段
 uint8_t send_item_flag = 0;		   // 投放货物触发标志
 uint16_t DelayCount_send_item = 0; // 投放货物计时器
-uint8_t have_turned_flag = 0;	   // 已经转过直角弯的标志位
 uint8_t line_end_fine_flag = 0;	   // 巡线结束标志位
+uint8_t frieght_left_or_right = 0; // 默认货站在右边（0）
 
 uint8_t have_avoid_flag = 0;   // 避障结束标志位
 uint8_t avoid_flag = 0;		   // 避障状态机
 uint16_t DelayCount_avoid = 0; // 避障计时器
 
+uint8_t have_turned_flag = 0;		// 已经转过直角弯的标志位
 uint8_t right_angle_turn_flag = 0;	// 直角弯状态机标志位
 uint16_t DelayCount_right_turn = 0; // 直角弯计时器
 
@@ -81,7 +81,12 @@ float Target_YawAngle = 0.0f; // 视觉给出的目标角度
 float real_gz = 0;
 float Base_Yaw = 0.0f;					// 当前行驶的基准方向
 static float avoid_original_yaw = 0.0f; // 记录避障前的原始偏航角
-#pragma endregion						// 结束折叠区
+float Vision_Derivative = 0;
+int16_t friction_offset = 0; // 静摩擦补偿大
+double Total_Distance = 0;	 // 车辆行驶距离
+#define WHEEL_DIAMETER 70.00
+#define PI 3.1415926
+#pragma endregion // 结束折叠区
 
 void Show_parameter(void) // 参数显示函数
 {
@@ -149,6 +154,7 @@ int main(void)
 				right_angle_turn_flag = 0;
 				DelayCount_right_turn = 0;
 				is_startup_flag = 1;
+				Total_Distance = 0;
 
 				PID_Init(&SpeedPID);
 				PID_Init(&TurnPID_Vision); // ⚠️ 初始化视觉 PID
@@ -191,7 +197,7 @@ int main(void)
 					SpeedPID.Target = MIN_SPEED;
 					right_angle_turn_flag = 2;
 				}
-				else if (right_angle_turn_flag == 2 && DelayCount_right_turn >= 1186)
+				else if (right_angle_turn_flag == 2 && Total_Distance >= 50)
 				{
 					SpeedPID.Target = 0;
 					DelayCount_right_turn = 0;
@@ -199,11 +205,11 @@ int main(void)
 				}
 				else if (right_angle_turn_flag == 3)
 				{
-					Base_Yaw = 83;
+					Base_Yaw = -83;
 					right_angle_turn_flag = 4;
 					DelayCount_right_turn = 0;
 				}
-				else if (right_angle_turn_flag == 4 && DelayCount_right_turn >= 786)
+				else if (right_angle_turn_flag == 4 && DelayCount_right_turn >= 800)
 				{
 					DelayCount_right_turn = 0;
 					PID_Init(&SpeedPID);
@@ -220,7 +226,7 @@ int main(void)
 					SpeedPID.Target = MIN_SPEED;
 					right_angle_turn_flag = 2;
 				}
-				else if (right_angle_turn_flag == 2 && DelayCount_right_turn >= 1186)
+				else if (right_angle_turn_flag == 2 && Total_Distance >= 70)
 				{
 					SpeedPID.Target = 0;
 					DelayCount_right_turn = 0;
@@ -232,7 +238,7 @@ int main(void)
 					right_angle_turn_flag = 4;
 					DelayCount_right_turn = 0;
 				}
-				else if (right_angle_turn_flag == 4 && DelayCount_right_turn >= 786)
+				else if (right_angle_turn_flag == 4 && DelayCount_right_turn >= 800)
 				{
 					DelayCount_right_turn = 0;
 					PID_Init(&SpeedPID);
@@ -274,10 +280,6 @@ int main(void)
 						if (Vision_Error_Integral < -100)
 							Vision_Error_Integral = -100;
 
-						// 计算 D (微分)
-						float Vision_Derivative = Vision_Error - Last_Vision_Error;
-						Last_Vision_Error = Vision_Error;
-
 						// 计算速度目标值 (根据偏差减速)
 						double expected_speed = BASE_SPEED - (SPEED_DROP_K * fabs(Vision_Error));
 						if (expected_speed < MIN_SPEED)
@@ -311,6 +313,10 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 			RxCmd = Serial_GetRxData();
 		}
 
+		// 计算 D (微分)
+		Vision_Derivative = Vision_Error - Last_Vision_Error;
+		Last_Vision_Error = Vision_Error;
+
 		// 定时器|延时部分
 		CountSpeedTurn++;		 // 速度转向环刷新计时器
 		if (send_item_flag == 1) // 投放货物延时
@@ -337,6 +343,9 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 			RightSpeed = Encoder_Get(2) / 44.0 / 0.05 / 9.27666;
 			AvgSpeed = (LeftSpeed + RightSpeed) / 2.0;
 			DifSpeed = LeftSpeed - RightSpeed;
+			double linear_speed_mps = AvgSpeed * (PI * WHEEL_DIAMETER);
+			double step_distance = linear_speed_mps * 0.05;
+			Total_Distance += step_distance;
 
 			if (RunFlag)
 			{
@@ -356,14 +365,14 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					LeftPWM = AvgPWM + DifPWM / 2;
 					RightPWM = AvgPWM - DifPWM / 2;
 
-					int16_t PWMMax = 33;
+					int16_t PWMMax = 40;
 					if (ConFlag == 1 || ConFlag == 2)
 					{
-						PWMMax = 26;
+						PWMMax = 46;
 					}
-					else if(send_item_flag == 1)
+					else if (send_item_flag == 1)
 					{
-						PWMMax = 26;
+						PWMMax = 46;
 					}
 					// PWM 限幅
 					if (LeftPWM >= PWMMax)
@@ -380,6 +389,50 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					TurnPID_Vision.Actual = DifSpeed; // 编码器实时差速
 					PID_Update(&TurnPID_Vision);
 					DifPWM = TurnPID_Vision.Out; // 视觉闭环输出
+
+					// // 【优化后的静摩擦软补偿 (前馈)】
+					// // 基础摩擦力补偿值，这个值要刚好能让悬空的车轮发出“滋滋”声但转得很慢
+					// int16_t friction_offset = 10;
+
+					// if (DifPWM > 1)
+					// {
+					// 	DifPWM += friction_offset; // 顺水推舟加一点力
+					// }
+					// else if (DifPWM < -1)
+					// {
+					// 	DifPWM -= friction_offset;
+					// }
+
+					// ==========================================
+					// 【新增：动静摩擦力分段补偿】
+					// ==========================================
+
+					// 判断车轮的整体活跃度 (把左右轮速度绝对值加起来)
+					// 如果速度极低，说明车子在转向时被卡住了（处于静摩擦状态）
+					if (fabs(LeftSpeed) < 0.13 && fabs(RightSpeed) < 0.13)
+					{
+						friction_offset = 16; // 静摩擦补偿大，用力“踹”一脚打破死区
+					}
+					else
+					{
+						friction_offset = 3; // 动摩擦补偿小，动起来后只需轻轻推着走
+					}
+
+					// 将动态计算出的补偿值，叠加到差速输出上
+					if (DifPWM > 1)
+					{
+						DifPWM += friction_offset;
+					}
+					else if (DifPWM < -1)
+					{
+						DifPWM -= friction_offset;
+					}
+
+					// 限制一下最大转向爆发力，防止重车甩尾过度
+					if (DifPWM > 45)
+						DifPWM = 45;
+					if (DifPWM < -45)
+						DifPWM = -45;
 
 					LeftPWM = AvgPWM + DifPWM / 2;
 					RightPWM = AvgPWM - DifPWM / 2;
@@ -438,19 +491,20 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				DelayCount_avoid = 0;
 				SpeedPID.Target = 1.86; // 慢速直线绕开圆柱
 				avoid_flag = 3;
+				Total_Distance = 0;
 			}
-			else if (avoid_flag == 3 && DelayCount_avoid >= 1886) // 斜向直行的时间（根据实际距离调）
+			else if (avoid_flag == 3 && Total_Distance >= 270) // 斜向直行的时间（根据实际距离调）
 			{
-				DelayCount_avoid = 0;
 				SpeedPID.Target = 0; // 再次停车准备转向
 				// 车头指向赛道：+45度减去90度 = -45度
-				Base_Yaw = avoid_original_yaw - 40.0f;
+				Base_Yaw = avoid_original_yaw - 38.0f;
 				avoid_flag = 4;
+				DelayCount_avoid = 0;
 			}
 			else if (avoid_flag == 4 && DelayCount_avoid >= 850) // 等待车头转好
 			{
 				DelayCount_avoid = 0;
-				SpeedPID.Target = 0.86; // 慢速往回开，主动去“撞”黑线
+				SpeedPID.Target = 1.46; // 慢速往回开，主动去“撞”黑线
 				avoid_flag = 5;
 			}
 			// ⚠️ 核心修改：斜角效应解法
@@ -458,11 +512,11 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 			else if (avoid_flag == 5 && RxCmd != 2)
 			{
 				DelayCount_avoid = 0;
-				SpeedPID.Target = 0.6; // 压线的瞬间，立刻刹车！
+				SpeedPID.Target = 0.96; // 压线的瞬间，立刻刹车！
 
 				// 不要急着把控制权给视觉！
 				// 用陀螺仪把车头掰回避障前的方向（完美平行于黑线）
-				Base_Yaw = avoid_original_yaw - 25;
+				Base_Yaw = avoid_original_yaw - 10;
 				avoid_flag = 6;
 			}
 			else if (avoid_flag == 6 && DelayCount_avoid >= 1000) // 给800ms让车头在黑线上原地转正
@@ -485,66 +539,171 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 #pragma region 全黑任务状态机
 			if ((RxCmd == 1 || line_end_fine_flag == 1) && (all_black_flag == 2)) // 全黑且巡线结束（货站）
 			{
+				DelayCount_send_item = 0;
 				send_item_flag = 1;
 				is_startup_flag = 1;
 				Base_Yaw = 83;
 				SpeedPID.Target = 0;
+				all_black_flag = 3;
+			}
+			else if (DelayCount_send_item >= 886 && all_black_flag == 3)
+			{
 				Serial_SendByte(86);
+				DelayCount_send_item = 0;
+				all_black_flag = 4;
+				Total_Distance = 0;
+				SpeedPID.Target = MIN_SPEED;
+			}
+			else if (Total_Distance >= 66 && all_black_flag == 4) // 先判断是不是开够了 200mm
+			{
+				Total_Distance = 0;	 // 距离达标，先清零
+				SpeedPID.Target = 0; // 建议先停车，防止跑过头
 
-				if (DelayCount_send_item >= 886 && RxCmd == 85) // 货站在右边
-				{
-					DelayCount_send_item = 0;
-					Base_Yaw = 0;
-					all_black_flag = 3;
-				}
-				else if (DelayCount_send_item >= 886 && RxCmd == 87) // 货站在左边
+				if (RxCmd == 85) // 此时如果看到了右边货站
 				{
 					DelayCount_send_item = 0;
 					Base_Yaw = 166;
-					all_black_flag = 3;
+					all_black_flag = 5;
+					frieght_left_or_right = 0;
+				}
+				else if (RxCmd == 87) // 此时如果看到了左边货站
+				{
+					DelayCount_send_item = 0;
+					Base_Yaw = 0;
+					all_black_flag = 5;
+					frieght_left_or_right = 1;
 				}
 			}
-			else if (all_black_flag == 3 && DelayCount_send_item >= 1186)
+			if (frieght_left_or_right == 0) // 货站在右边
 			{
-				DelayCount_send_item = 0;
-				Base_Yaw = 83;
-				all_black_flag = 4;
+				if (DelayCount_send_item >= 886 && all_black_flag == 5)
+				{
+					DelayCount_send_item = 0;
+					Total_Distance = 0;
+					SpeedPID.Target = MIN_SPEED * -1;
+					all_black_flag = 6;
+				}
+				else if (all_black_flag == 6 && fabs(Total_Distance) >= 300)
+				{
+					SpeedPID.Target = 0;
+					Total_Distance = 0;
+					Serial_SendByte(87);
+					all_black_flag = 7;
+					DelayCount_send_item = 0;
+				}
+				// else if (Trigger_Read_Pin(GPIOA, GPIO_Pin_15) == 1)
+				// {
+				// 	all_black_flag = 7;
+				// 	DelayCount_send_item = 0;
+				// }
+				else if (all_black_flag == 7 && DelayCount_send_item >= 1800) // 这步要投放货物
+				{
+					Total_Distance = 0;
+					SpeedPID.Target = MIN_SPEED;
+					all_black_flag = 8;
+				}
+				else if (all_black_flag == 8 && Total_Distance >= 240) // 可能调参
+				{
+					SpeedPID.Target = 0;
+					// Base_Yaw = 83;
+					all_black_flag = 9;
+					DelayCount_send_item = 0;
+					frieght_left_or_right = 3;
+				}
 			}
-			else if (all_black_flag == 4 && DelayCount_send_item >= 886)
+			else if (frieght_left_or_right == 1) // 货站在左边
+			{
+				if (DelayCount_send_item >= 886 && all_black_flag == 5)
+				{
+					DelayCount_send_item = 0;
+					Total_Distance = 0;
+					SpeedPID.Target = MIN_SPEED * -1;
+					all_black_flag = 6;
+				}
+				else if (all_black_flag == 6 && fabs(Total_Distance) >= 180)
+				{
+					SpeedPID.Target = 0;
+					Total_Distance = 0;
+					all_black_flag = 7;
+					Serial_SendByte(87);
+					DelayCount_send_item = 0;
+				}
+				else if (all_black_flag == 7 && DelayCount_send_item >= 1800) // 这步要投放货物
+				{
+					Total_Distance = 0;
+					SpeedPID.Target = MIN_SPEED;
+					all_black_flag = 8;
+				}
+				else if (all_black_flag == 8 && Total_Distance >= 160) // 可能调参
+				{
+					SpeedPID.Target = 0;
+					all_black_flag = 9;
+					DelayCount_send_item = 0;
+					frieght_left_or_right = 3;
+				}
+			}
+			else if (all_black_flag == 9 && DelayCount_send_item >= 10)
+			{
+				Base_Yaw = 83;
+				all_black_flag = 10;
+				DelayCount_send_item = 0;
+			}
+			else if (all_black_flag == 10 && DelayCount_send_item >= 886)
 			{
 				send_item_flag = 0;
 				SpeedPID.Target = 3.86;
-				all_black_flag = 5;
-				Serial_SendByte(87);
+				all_black_flag = 11;
 			}
 			else if ((RxCmd == 1 || RxCmd == 81 || RxCmd == 91 || RxCmd == 82 ||
 					  RxCmd == 92 || RxCmd == 83 || RxCmd == 93) &&
-					 all_black_flag == 5) // 等待终点
+					 all_black_flag == 11) // 等待终点
 				RunFlag = 0;
 #pragma endregion
 
 #pragma region 直角弯|货站检测|避障触发器
+			static uint8_t right_turn_filter_count = 0;
+			static uint8_t left_turn_filter_count = 0;
+
 			if (ConFlag == 0 && have_turned_flag == 0) // 正常巡线状态+还未转直角弯
 			{
 				if (RxCmd == 81 || RxCmd == 82 || RxCmd == 83)
 				{
-					ConFlag = 1;
-					is_startup_flag = 1;
-					have_turned_flag = 1;
-					right_angle_turn_flag = 1;
-					PID_Init(&SpeedPID);
-					PID_Init(&TurnPID_Vision);
-					PID_Init(&TurnPID_Gyro);
+					right_turn_filter_count++;		  // 右转信号累计
+					left_turn_filter_count = 0;		  // 互斥清零：有右转信号就不可能是左转
+					if (right_turn_filter_count >= 8) // 连续维持 5ms 以上
+					{
+						ConFlag = 1;
+						is_startup_flag = 1;
+						have_turned_flag = 1;
+						right_angle_turn_flag = 1;
+						PID_Init(&SpeedPID);
+						PID_Init(&TurnPID_Vision);
+						PID_Init(&TurnPID_Gyro);
+						right_turn_filter_count = 0;
+						Total_Distance = 0;
+					}
 				}
 				else if (RxCmd == 91 || RxCmd == 92 || RxCmd == 93)
 				{
-					ConFlag = 2;
-					is_startup_flag = 1;
-					have_turned_flag = 1;
-					right_angle_turn_flag = 1;
-					PID_Init(&SpeedPID);
-					PID_Init(&TurnPID_Vision);
-					PID_Init(&TurnPID_Gyro);
+					left_turn_filter_count++;		 // 左转信号累计
+					right_turn_filter_count = 0;	 // 互斥清零
+					if (left_turn_filter_count >= 8) // 连续维持 5ms 以上
+					{
+						ConFlag = 2;
+						is_startup_flag = 1;
+						have_turned_flag = 1;
+						right_angle_turn_flag = 1;
+						PID_Init(&SpeedPID);
+						PID_Init(&TurnPID_Vision);
+						PID_Init(&TurnPID_Gyro);
+						left_turn_filter_count = 0;
+						Total_Distance = 0;
+					}
+				}
+				else
+				{
+					right_turn_filter_count = 0;
+					left_turn_filter_count = 0;
 				}
 			}
 			else if (ConFlag == 0 && (RxCmd == 1 || RxCmd == 81 || RxCmd == 91 || RxCmd == 82 || RxCmd == 92 || RxCmd == 83 || RxCmd == 93) && have_turned_flag == 1) // 检测到货站
@@ -552,6 +711,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				line_end_fine_flag = 1;
 				Base_Yaw = 83;
 				is_startup_flag = 1;
+				ConFlag = 3;
 			}
 
 			// --- 4. 捕捉进入避障 ---
