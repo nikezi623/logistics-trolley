@@ -542,16 +542,17 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				is_startup_flag = 1;
 				Base_Yaw = 83;
 				SpeedPID.Target = 0;
+				all_black_flag = 3;
 			}
-			else if (DelayCount_send_item >= 886 && all_black_flag == 2)
+			else if (DelayCount_send_item >= 886 && all_black_flag == 3)
 			{
 				Serial_SendByte(86);
 				DelayCount_send_item = 0;
-				all_black_flag = 3;
+				all_black_flag = 4;
 				Total_Distance = 0;
 				SpeedPID.Target = MIN_SPEED;
 			}
-			else if (Total_Distance >= 100 && all_black_flag == 3) // 先判断是不是开够了 200mm
+			else if (Total_Distance >= 100 && all_black_flag == 4) // 先判断是不是开够了 200mm
 			{
 				Total_Distance = 0;	 // 距离达标，先清零
 				SpeedPID.Target = 0; // 建议先停车，防止跑过头
@@ -560,31 +561,31 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				{
 					DelayCount_send_item = 0;
 					Base_Yaw = 166;
-					all_black_flag = 4;
+					all_black_flag = 5;
 				}
 				else if (RxCmd == 87) // 此时如果看到了左边货站
 				{
 					DelayCount_send_item = 0;
 					Base_Yaw = 0;
-					all_black_flag = 4;
+					all_black_flag = 5;
 				}
 			}
-			else if (all_black_flag == 4 && DelayCount_send_item >= 1186) // 先用延时1186ms代替投放货物
+			else if (all_black_flag == 5 && DelayCount_send_item >= 1186) // 先用延时1186ms代替投放货物
 			{
 				DelayCount_send_item = 0;
 				Base_Yaw = 83;
-				all_black_flag = 5;
+				all_black_flag = 6;
 			}
-			else if (all_black_flag == 5 && DelayCount_send_item >= 886)
+			else if (all_black_flag == 6 && DelayCount_send_item >= 886)
 			{
 				send_item_flag = 0;
 				SpeedPID.Target = 3.86;
-				all_black_flag = 6;
+				all_black_flag = 7;
 				Serial_SendByte(87);
 			}
 			else if ((RxCmd == 1 || RxCmd == 81 || RxCmd == 91 || RxCmd == 82 ||
 					  RxCmd == 92 || RxCmd == 83 || RxCmd == 93) &&
-					 all_black_flag == 6) // 等待终点
+					 all_black_flag == 7) // 等待终点
 				RunFlag = 0;
 #pragma endregion
 
