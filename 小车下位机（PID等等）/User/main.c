@@ -552,7 +552,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 				Total_Distance = 0;
 				SpeedPID.Target = MIN_SPEED;
 			}
-			else if (Total_Distance >= 100 && all_black_flag == 4) // 先判断是不是开够了 200mm
+			else if (Total_Distance >= 80 && all_black_flag == 4) // 先判断是不是开够了 200mm
 			{
 				Total_Distance = 0;	 // 距离达标，先清零
 				SpeedPID.Target = 0; // 建议先停车，防止跑过头
@@ -570,22 +570,46 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					all_black_flag = 5;
 				}
 			}
-			else if (all_black_flag == 5 && DelayCount_send_item >= 1186) // 先用延时1186ms代替投放货物
+			else if (all_black_flag == 5 && DelayCount_send_item >= 1186)
 			{
 				DelayCount_send_item = 0;
-				Base_Yaw = 83;
+				// Base_Yaw = 83;
+				SpeedPID.Target = MIN_SPEED * -1;
+				Total_Distance = 0;
 				all_black_flag = 6;
 			}
-			else if (all_black_flag == 6 && DelayCount_send_item >= 886)
+			else if (all_black_flag == 6 && fabs(Total_Distance) >= 200) //可能调参
 			{
-				send_item_flag = 0;
-				SpeedPID.Target = 3.86;
+				SpeedPID.Target = 0;
+				Total_Distance = 0;
+				// 此处靠近货站，应该发送信息给天花板单片机使其投放
+				//  SpeedPID.Target = 3.86;
+				// send_item_flag = 0;
 				all_black_flag = 7;
 				Serial_SendByte(87);
+				DelayCount_send_item = 0;
+			}
+			else if (all_black_flag == 7 && DelayCount_send_item >= 886)
+			{
+				Total_Distance = 0;
+				SpeedPID.Target = MIN_SPEED;
+				all_black_flag = 8;
+			}
+			else if (all_black_flag == 8 && Total_Distance >= 190) //可能调参
+			{
+				SpeedPID.Target = 0;
+				Base_Yaw = 83;
+				all_black_flag = 9;
+				DelayCount_send_item = 0;
+			}
+			else if (all_black_flag == 9 && DelayCount_send_item == 886)
+			{
+				all_black_flag = 10;
+				SpeedPID.Target = 3.86;
 			}
 			else if ((RxCmd == 1 || RxCmd == 81 || RxCmd == 91 || RxCmd == 82 ||
 					  RxCmd == 92 || RxCmd == 83 || RxCmd == 93) &&
-					 all_black_flag == 7) // 等待终点
+					 all_black_flag == 10) // 等待终点
 				RunFlag = 0;
 #pragma endregion
 
