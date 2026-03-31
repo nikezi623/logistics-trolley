@@ -4,10 +4,9 @@
 #define BASE_SPEED 1.86 // 基础直道速度
 #define MIN_SPEED 1.00	// 弯道最低速度
 
-float VISION_KP = 1.00; // 转向环灵敏度增益
-float VISION_KI = 0;	// 视觉误差积分系数 (从0慢慢调)
-float VISION_KD = 3.68; // 视觉误差微分系数
-
+float VISION_KP = 0.80;	   // 转向环灵敏度增益
+float VISION_KI = 0;	   // 视觉误差积分系数 (从0慢慢调)
+float VISION_KD = 6.00;	   // 视觉误差微分系数
 float SPEED_DROP_K = 6.68; // 弯道减速系数
 
 // 速度环PID
@@ -23,7 +22,7 @@ PID_t SpeedPID = {
 
 // 视觉转向环PID
 PID_t TurnPID_Vision = {
-	.Kp = 8.00,
+	.Kp = 6.00,
 	.Ki = 0.80,
 	.Kd = 5.50,
 	.OutMax = 100,
@@ -82,6 +81,10 @@ float real_gz = 0;
 float Base_Yaw = 0.0f;					// 当前行驶的基准方向
 static float avoid_original_yaw = 0.0f; // 记录避障前的原始偏航角
 float Vision_Derivative = 0;
+int16_t friction_offset = 0; // 静摩擦补偿大
+double Total_Distance = 0;	 // 车辆行驶距离
+#define WHEEL_DIAMETER 70.00
+#define PI 3.1415926
 #pragma endregion // 结束折叠区
 
 void Show_parameter(void) // 参数显示函数
@@ -150,6 +153,7 @@ int main(void)
 				right_angle_turn_flag = 0;
 				DelayCount_right_turn = 0;
 				is_startup_flag = 1;
+				Total_Distance = 0;
 
 				PID_Init(&SpeedPID);
 				PID_Init(&TurnPID_Vision); // ⚠️ 初始化视觉 PID
@@ -192,7 +196,7 @@ int main(void)
 					SpeedPID.Target = MIN_SPEED;
 					right_angle_turn_flag = 2;
 				}
-				else if (right_angle_turn_flag == 2 && DelayCount_right_turn >= 1186)
+				else if (right_angle_turn_flag == 2 && Total_Distance >= 50)
 				{
 					SpeedPID.Target = 0;
 					DelayCount_right_turn = 0;
@@ -204,7 +208,7 @@ int main(void)
 					right_angle_turn_flag = 4;
 					DelayCount_right_turn = 0;
 				}
-				else if (right_angle_turn_flag == 4 && DelayCount_right_turn >= 786)
+				else if (right_angle_turn_flag == 4 && DelayCount_right_turn >= 800)
 				{
 					DelayCount_right_turn = 0;
 					PID_Init(&SpeedPID);
@@ -221,7 +225,7 @@ int main(void)
 					SpeedPID.Target = MIN_SPEED;
 					right_angle_turn_flag = 2;
 				}
-				else if (right_angle_turn_flag == 2 && DelayCount_right_turn >= 1650)
+				else if (right_angle_turn_flag == 2 && Total_Distance >= 70)
 				{
 					SpeedPID.Target = 0;
 					DelayCount_right_turn = 0;
@@ -338,6 +342,9 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 			RightSpeed = Encoder_Get(2) / 44.0 / 0.05 / 9.27666;
 			AvgSpeed = (LeftSpeed + RightSpeed) / 2.0;
 			DifSpeed = LeftSpeed - RightSpeed;
+			double linear_speed_mps = AvgSpeed * (PI * WHEEL_DIAMETER);
+			double step_distance = linear_speed_mps * 0.05;
+			Total_Distance += step_distance;
 
 			if (RunFlag)
 			{
@@ -382,12 +389,49 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 					PID_Update(&TurnPID_Vision);
 					DifPWM = TurnPID_Vision.Out; // 视觉闭环输出
 
-					// 【新增：重车转向死区补偿】
-					// 如果视觉要求转向，且差速太小推不动重车，强制给一个最小突破力
-					if (DifPWM > 2 && DifPWM < 19)
-						DifPWM = 19;
-					else if (DifPWM < -2 && DifPWM > -19)
-						DifPWM = -19;
+					// // 【优化后的静摩擦软补偿 (前馈)】
+					// // 基础摩擦力补偿值，这个值要刚好能让悬空的车轮发出“滋滋”声但转得很慢
+					// int16_t friction_offset = 10;
+
+					// if (DifPWM > 1)
+					// {
+					// 	DifPWM += friction_offset; // 顺水推舟加一点力
+					// }
+					// else if (DifPWM < -1)
+					// {
+					// 	DifPWM -= friction_offset;
+					// }
+
+					// ==========================================
+					// 【新增：动静摩擦力分段补偿】
+					// ==========================================
+
+					// 判断车轮的整体活跃度 (把左右轮速度绝对值加起来)
+					// 如果速度极低，说明车子在转向时被卡住了（处于静摩擦状态）
+					if (fabs(LeftSpeed) < 0.20 && fabs(RightSpeed) < 0.20)
+					{
+						friction_offset = 18; // 静摩擦补偿大，用力“踹”一脚打破死区
+					}
+					else
+					{
+						friction_offset = 9; // 动摩擦补偿小，动起来后只需轻轻推着走
+					}
+
+					// 将动态计算出的补偿值，叠加到差速输出上
+					if (DifPWM > 1)
+					{
+						DifPWM += friction_offset;
+					}
+					else if (DifPWM < -1)
+					{
+						DifPWM -= friction_offset;
+					}
+
+					// 限制一下最大转向爆发力，防止重车甩尾过度
+					if (DifPWM > 45)
+						DifPWM = 45;
+					if (DifPWM < -45)
+						DifPWM = -45;
 
 					LeftPWM = AvgPWM + DifPWM / 2;
 					RightPWM = AvgPWM - DifPWM / 2;
@@ -539,8 +583,8 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 			{
 				if (RxCmd == 81 || RxCmd == 82 || RxCmd == 83)
 				{
-					right_turn_filter_count++;		  // 右转信号累计
-					left_turn_filter_count = 0;		  // 互斥清零：有右转信号就不可能是左转
+					right_turn_filter_count++;	// 右转信号累计
+					left_turn_filter_count = 0; // 互斥清零：有右转信号就不可能是左转
 					if (right_turn_filter_count >= 5) // 连续维持 5ms 以上
 					{
 						ConFlag = 1;
@@ -550,15 +594,14 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 						PID_Init(&SpeedPID);
 						PID_Init(&TurnPID_Vision);
 						PID_Init(&TurnPID_Gyro);
-
 						right_turn_filter_count = 0;
+						Total_Distance = 0;
 					}
 				}
 				else if (RxCmd == 91 || RxCmd == 92 || RxCmd == 93)
 				{
 					left_turn_filter_count++;	 // 左转信号累计
 					right_turn_filter_count = 0; // 互斥清零
-
 					if (left_turn_filter_count >= 5) // 连续维持 5ms 以上
 					{
 						ConFlag = 2;
@@ -569,6 +612,7 @@ void TIM1_UP_IRQHandler(void) // 1ms进入一次
 						PID_Init(&TurnPID_Vision);
 						PID_Init(&TurnPID_Gyro);
 						left_turn_filter_count = 0;
+						Total_Distance = 0;
 					}
 				}
 				else
