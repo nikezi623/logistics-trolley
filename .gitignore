@@ -50,3 +50,6 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# 忽略 Keil 用户的本地视窗配置文件
+*.uvguix.*
